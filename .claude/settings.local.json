@@ -7,7 +7,11 @@
       "Bash(git branch:*)",
       "Bash(git remote add:*)",
       "Bash(git remote set-url:*)",
-      "Bash(npx shadcn@latest add:*)"
+      "Bash(npx shadcn@latest add:*)",
+      "Bash(npx prisma db push:*)",
+      "Bash(npm install:*)",
+      "Bash(node:*)",
+      "Bash(npm run build:*)"
     ],
     "deny": [],
     "ask": []

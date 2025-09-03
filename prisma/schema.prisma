@@ -1,0 +1,252 @@
+// BilbyAI AgedCare Phone System Copilot - Prisma Schema
+// Australian Aged Care and NDIS Compliance
+
+generator client {
+  provider = "prisma-client-js"
+  output   = "../src/generated/prisma"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+  directUrl = env("POSTGRES_URL_NON_POOLING")
+}
+
+// User Management and Authentication
+model User {
+  id        String   @id @default(cuid())
+  email     String   @unique
+  name      String
+  role      UserRole
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  // Assigned tasks and calls
+  assignedTasks Task[]
+  handledCalls  Call[]
+
+  @@map("users")
+}
+
+enum UserRole {
+  COORDINATOR
+  TEAM_LEAD
+  ADMIN
+  CARE_STAFF
+}
+
+// Australian Aged Care Client/Resident Model
+model Client {
+  id             String                @id @default(cuid())
+  name           String
+  age            Int
+  room           String?
+  program        AustralianCareProgram
+  admissionDate  DateTime
+  doNotRecord    Boolean               @default(false)
+  careLevel      CareLevel
+  createdAt      DateTime              @default(now())
+  updatedAt      DateTime              @updatedAt
+
+  // Emergency Contact Information
+  emergencyContactName         String
+  emergencyContactRelationship String
+  emergencyContactPhone        String
+
+  // Medical Information
+  medicalConditions String[] // Array of conditions
+  medications       Medication[]
+
+  // Related records
+  calls         Call[]
+  tasks         Task[]
+  recentAlerts  Alert[]
+
+  @@map("clients")
+}
+
+enum AustralianCareProgram {
+  HCP   // Home Care Package
+  CHSP  // Commonwealth Home Support Programme
+  NDIS  // National Disability Insurance Scheme
+}
+
+enum CareLevel {
+  LOW
+  MEDIUM
+  HIGH
+  MEMORY_CARE
+}
+
+// Medication Management
+model Medication {
+  id        String    @id @default(cuid())
+  name      String
+  dosage    String
+  frequency String
+  lastTaken DateTime?
+  createdAt DateTime  @default(now())
+  updatedAt DateTime  @updatedAt
+
+  // Relationship
+  clientId String
+  client   Client @relation(fields: [clientId], references: [id], onDelete: Cascade)
+
+  @@map("medications")
+}
+
+// Alert System for Care Coordination
+model Alert {
+  id        String    @id @default(cuid())
+  type      AlertType
+  message   String
+  timestamp DateTime  @default(now())
+  resolved  Boolean   @default(false)
+
+  // Relationship
+  clientId String
+  client   Client @relation(fields: [clientId], references: [id], onDelete: Cascade)
+
+  @@map("alerts")
+}
+
+enum AlertType {
+  MEDICAL
+  BEHAVIORAL
+  FAMILY
+  CARE
+}
+
+// Call Management and Telephony
+model Call {
+  id           String     @id @default(cuid())
+  callerName   String
+  callerType   CallerType
+  clientName   String?
+  startTime    DateTime   @default(now())
+  endTime      DateTime?
+  duration     String?
+  status       CallStatus @default(ACTIVE)
+  consentGiven Boolean    @default(false)
+  confidence   Float?
+
+  // AI Generated Summary
+  summary String?
+
+  // Relationships
+  clientId String?
+  client   Client? @relation(fields: [clientId], references: [id])
+
+  handlerId String?
+  handler   User?   @relation(fields: [handlerId], references: [id])
+
+  // Related records
+  segments TranscriptSegment[]
+  tasks    Task[]
+
+  @@map("calls")
+}
+
+enum CallerType {
+  FAMILY
+  RESIDENT
+  STAFF
+  EXTERNAL
+  OUTBOUND
+}
+
+enum CallStatus {
+  ACTIVE
+  COMPLETED
+  PROCESSING
+}
+
+// Real-time Transcription with Speaker Diarization
+model TranscriptSegment {
+  id         String     @id @default(cuid())
+  speaker    Speaker
+  text       String
+  timestamp  DateTime   @default(now())
+  confidence Float
+  isPartial  Boolean    @default(false)
+
+  // Relationship
+  callId String
+  call   Call   @relation(fields: [callId], references: [id], onDelete: Cascade)
+
+  @@map("transcript_segments")
+}
+
+enum Speaker {
+  COORDINATOR
+  CLIENT
+  FAMILY
+  EXTERNAL
+  OTHER
+}
+
+// AI-Powered Task Management
+model Task {
+  id          String     @id @default(cuid())
+  title       String
+  description String
+  type        TaskType
+  priority    Priority
+  status      TaskStatus @default(PENDING)
+  assignedTo  String
+  dueDate     DateTime
+  sourceCall  String?
+  confidence  Float?     // AI extraction confidence
+  completed   Boolean    @default(false)
+  createdAt   DateTime   @default(now())
+  updatedAt   DateTime   @updatedAt
+
+  // Relationships
+  clientId String
+  client   Client @relation(fields: [clientId], references: [id], onDelete: Cascade)
+
+  callId String?
+  call   Call?   @relation(fields: [callId], references: [id])
+
+  assigneeId String?
+  assignee   User?   @relation(fields: [assigneeId], references: [id])
+
+  @@map("tasks")
+}
+
+enum TaskType {
+  MEDICAL
+  CARE
+  FAMILY
+  DOCUMENTATION
+  FOLLOW_UP
+}
+
+enum Priority {
+  LOW
+  MEDIUM
+  HIGH
+  URGENT
+}
+
+enum TaskStatus {
+  PENDING
+  IN_PROGRESS
+  COMPLETED
+  CANCELLED
+}
+
+// Audit and Compliance Logging
+model AuditLog {
+  id        String   @id @default(cuid())
+  action    String
+  resource  String
+  resourceId String?
+  userId    String?
+  userEmail String?
+  timestamp DateTime @default(now())
+  details   Json?    // Additional metadata
+  ipAddress String?
+
+  @@map("audit_logs")
+}
