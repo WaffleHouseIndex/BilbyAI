@@ -1,0 +1,7 @@
+Inspiration/
+node_modules/
+.git/
+*.log
+.env
+.env.local
+.vercel

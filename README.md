@@ -1,36 +1,141 @@
-This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
+# BilbyAI - AgedCare Phone System Copilot
 
-## Getting Started
+A phone system "copilot" for aged-care coordinators that captures, transcribes, and processes phone calls to reduce documentation time and prevent missed follow-ups. Focused on Australian aged-care and NDIS coordination.
 
-First, run the development server:
+## 🎯 Project Goals
+- Cut coordinator documentation time per call by ≥60%
+- Reduce missed follow-ups by ≥50%
+- Achieve ≥95% AU accent transcription accuracy
+- 100% consent compliance for recorded calls
+- ≥40% first-screen note acceptance rate
 
-```bash
-npm run dev
-# or
-yarn dev
-# or
-pnpm dev
-# or
-bun dev
+## 🚀 Current Status: Phase 2 Complete
+**✅ Completed**: Professional coordinator dashboard with 3-panel layout, Australian aged care context, and demonstration-ready features.
+
+### Working Features (Demo Ready)
+- **3-Panel Coordinator Dashboard**: Resizable layout with client profiles, task management, and transcription
+- **Client/Resident Management**: Australian aged care context with HCP/CHSP/NDIS programs
+- **Task Management System**: AI-generated tasks with priority, assignment, and completion tracking
+- **Mock Transcription Interface**: Live call simulation with speaker diarization
+- **Call Control Bar**: Consent management and Australian compliance features
+- **Responsive Design**: Professional shadcn/ui components with Australian localization
+
+## 🏗️ Architecture Overview
+
+### Frontend Stack
+- **Next.js 15.5.2** with App Router and TypeScript
+- **React 19** with Server Components
+- **Tailwind CSS v4** for styling
+- **shadcn/ui** component library (17+ components)
+- **Turbopack** for fast development builds
+
+### Component Architecture
+```
+src/
+├── app/
+│   ├── dashboard/          # Main coordinator interface
+│   │   ├── layout.tsx     # Dashboard shell with navigation
+│   │   └── page.tsx       # 3-panel resizable layout
+│   ├── layout.tsx         # Root layout
+│   └── page.tsx           # Redirect to dashboard
+├── components/
+│   ├── dashboard/         # Core dashboard components
+│   │   ├── CallControlBar.tsx        # Call controls & consent
+│   │   ├── ClientProfilePanel.tsx    # Resident management
+│   │   ├── TaskManagementPanel.tsx   # Care coordination tasks
+│   │   └── TranscriptionPanel.tsx    # Live & historical calls
+│   └── ui/                # shadcn/ui component library
+└── lib/
+    └── utils.ts           # Utility functions
 ```
 
-Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
+### Data Models (Mock Implementation)
+- **Client**: Australian aged care residents with HCP/CHSP/NDIS programs
+- **Task**: Care coordination with AU healthcare context
+- **Call**: Transcription with speaker diarization and consent tracking
+- **Transcript**: Segmented with confidence scoring
 
-You can start editing the page by modifying `app/page.tsx`. The page auto-updates as you edit the file.
+## 🛠️ Local Development
 
-This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
+### Prerequisites
+- Node.js 18+ (tested with v22.17.0)
+- npm 10+ (tested with v10.9.2)
 
-## Learn More
+### Quick Start
+```bash
+# Clone repository
+git clone https://github.com/WaffleHouseIndex/BilbyAI.git
+cd BilbyAI
 
-To learn more about Next.js, take a look at the following resources:
+# Install dependencies
+npm install
 
-- [Next.js Documentation](https://nextjs.org/docs) - learn about Next.js features and API.
-- [Learn Next.js](https://nextjs.org/learn) - an interactive Next.js tutorial.
+# Start development server
+npm run dev
 
-You can check out [the Next.js GitHub repository](https://github.com/vercel/next.js) - your feedback and contributions are welcome!
+# Open in browser
+http://localhost:3000 (redirects to /dashboard)
+```
 
-## Deploy on Vercel
+### Environment Setup
+1. Copy `.env.example` to `.env.local`
+2. Configure external services (optional for demo):
+   - Twilio (telephony)
+   - Azure Speech Services (Australian English)
+   - Supabase (database)
+   - Auth0 (authentication)
 
-The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
+## 🎨 Design System
+Built with **shadcn/ui** components following Australian Government Design System principles:
+- Accessibility-first design
+- Responsive layouts for mobile coordinators
+- High contrast for clinical environments
+- Australian English localization
 
-Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.
+## 📋 Phase Implementation Status
+
+### ✅ Phase 1: Foundation (Complete)
+- Next.js 15 with TypeScript and Turbopack
+- shadcn/ui component system
+- Git repository and development environment
+- **Duration**: 2 days
+
+### ✅ Phase 2: Core UI Development (Complete)
+- 3-panel coordinator dashboard
+- Client/resident profile management
+- Task management with Australian care context
+- Mock transcription interface
+- Call control bar with consent management
+- **Duration**: 3 days
+
+### 🔄 Next Phases
+- **Phase 3**: Telephony Integration (Twilio WebRTC)
+- **Phase 4**: Speech Processing (Azure Speech AU)
+- **Phase 5**: AI Processing (OpenAI/Anthropic)
+- **Phase 6**: Production Deployment & Compliance
+
+## 🌏 Australian Compliance Features
+- Data residency in Australian regions
+- Privacy controls for "Do Not Record" clients
+- HCP/CHSP/NDIS program categorization
+- Australian phone number formats
+- Local date/time formatting
+- Healthcare terminology and workflows
+
+## 🚀 Deployment
+Ready for Vercel deployment with:
+- Australian region configuration (`syd1`)
+- Security headers for healthcare compliance
+- Environment variable templates
+- Production build verification
+
+## 📚 Development Resources
+- [Inspiration Examples](./Inspiration/) - UI/UX reference implementations
+- [Implementation Plan](./IMPLEMENTATION_PLAN.md) - 6-phase development roadmap
+- [Development Progress](./DEVELOPMENT_PROGRESS.md) - Sprint tracking
+
+## 🤝 Contributing
+This is a private project for Australian aged care coordination. See handover documentation for development continuation.
+
+## 📄 License
+Private project - All rights reserved

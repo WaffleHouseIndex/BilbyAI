@@ -5,15 +5,12 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { ScrollArea } from '@/components/ui/scroll-area';
-import { Separator } from '@/components/ui/separator';
+// import { Separator } from '@/components/ui/separator';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { 
-  Clock, 
   User, 
   Phone, 
-  Download, 
-  Search,
-  Volume2,
+  Download,
   FileText,
   Bot,
   MessageSquare,
@@ -23,7 +20,7 @@ import {
 
 interface TranscriptSegment {
   id: string;
-  speaker: 'coordinator' | 'client' | 'family' | 'other';
+  speaker: 'coordinator' | 'client' | 'family' | 'external' | 'other';
   text: string;
   timestamp: Date;
   confidence: number;
@@ -218,17 +215,17 @@ export function TranscriptionPanel({ isRecording, currentCallId }: Transcription
     }
   };
 
-  const formatDuration = (start: Date, end?: Date) => {
-    if (!end) return '0:00';
-    const diff = end.getTime() - start.getTime();
-    const minutes = Math.floor(diff / 60000);
-    const seconds = Math.floor((diff % 60000) / 1000);
-    return `${minutes}:${seconds.toString().padStart(2, '0')}`;
-  };
+  // const formatDuration = (start: Date, end?: Date) => {
+  //   if (!end) return '0:00';
+  //   const diff = end.getTime() - start.getTime();
+  //   const minutes = Math.floor(diff / 60000);
+  //   const seconds = Math.floor((diff % 60000) / 1000);
+  //   return `${minutes}:${seconds.toString().padStart(2, '0')}`;
+  // };
 
   return (
     <div className="h-full flex flex-col">
-      <Tabs value={activeTab} onValueChange={(value) => setActiveTab(value as any)} className="h-full flex flex-col">
+      <Tabs value={activeTab} onValueChange={(value) => setActiveTab(value as 'live' | 'history' | 'summary')} className="h-full flex flex-col">
         <div className="p-4 border-b">
           <TabsList className="grid w-full grid-cols-3">
             <TabsTrigger value="live" className="relative">

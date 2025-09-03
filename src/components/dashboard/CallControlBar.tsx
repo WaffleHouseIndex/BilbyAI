@@ -12,8 +12,7 @@ import {
   PhoneOff, 
   Mic, 
   MicOff, 
-  Volume2, 
-  VolumeX,
+  Volume2,
   Shield,
   ShieldCheck,
   Clock
@@ -30,7 +29,7 @@ export function CallControlBar({ isRecording, onStartCall, onEndCall, currentCal
   const [isMuted, setIsMuted] = useState(false);
   const [hasConsent, setHasConsent] = useState(false);
   const [selectedCallerId, setSelectedCallerId] = useState('main');
-  const [callDuration, setCallDuration] = useState(0);
+  // const [callDuration, setCallDuration] = useState(0);
 
   // Mock caller ID options (would come from environment config)
   const callerIdOptions = [
@@ -119,7 +118,7 @@ export function CallControlBar({ isRecording, onStartCall, onEndCall, currentCal
 
           {/* Center: Call Status */}
           <div className="flex items-center gap-4">
-            <Badge variant={status.color as any} className="flex items-center gap-2">
+            <Badge variant={status.color as "default" | "destructive" | "secondary"} className="flex items-center gap-2">
               <Phone className="h-3 w-3" />
               {status.text}
             </Badge>

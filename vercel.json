@@ -1,20 +1,6 @@
 {
-  "project": "bilbyai-agecare-copilot",
-  "name": "BilbyAI AgedCare Copilot",
+  "$schema": "https://openapi.vercel.sh/vercel.json",
   "regions": ["syd1"],
-  "env": {
-    "NODE_ENV": "production"
-  },
-  "build": {
-    "env": {
-      "NODE_ENV": "production"
-    }
-  },
-  "functions": {
-    "src/app/**/*.{ts,tsx}": {
-      "runtime": "nodejs20.x"
-    }
-  },
   "headers": [
     {
       "source": "/(.*)",
@@ -36,13 +22,6 @@
           "value": "max-age=31536000; includeSubDomains"
         }
       ]
-    }
-  ],
-  "redirects": [
-    {
-      "source": "/",
-      "destination": "/dashboard",
-      "permanent": false
     }
   ]
 }

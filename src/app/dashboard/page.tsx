@@ -2,13 +2,12 @@
 
 import { useState } from 'react';
 import { Badge } from '@/components/ui/badge';
-import { Button } from '@/components/ui/button';
 import { ResizablePanelGroup, ResizablePanel, ResizableHandle } from '@/components/ui/resizable';
 import { ClientProfilePanel } from '@/components/dashboard/ClientProfilePanel';
 import { TaskManagementPanel } from '@/components/dashboard/TaskManagementPanel';
 import { TranscriptionPanel } from '@/components/dashboard/TranscriptionPanel';
 import { CallControlBar } from '@/components/dashboard/CallControlBar';
-import { Mic, MicOff } from 'lucide-react';
+import { Mic } from 'lucide-react';
 
 export default function DashboardPage() {
   const [isRecording, setIsRecording] = useState(false);

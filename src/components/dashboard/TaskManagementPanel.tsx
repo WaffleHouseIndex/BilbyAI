@@ -1,12 +1,12 @@
 'use client';
 
 import { useState } from 'react';
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import { Card, CardContent, CardHeader } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { Checkbox } from '@/components/ui/checkbox';
-import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
+import { Tabs, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { 
   Clock, 
   User, 
@@ -18,8 +18,7 @@ import {
   Phone,
   FileText,
   Heart,
-  Plus,
-  Filter
+  Plus
 } from 'lucide-react';
 
 interface Task {
@@ -217,7 +216,7 @@ export function TaskManagementPanel({ isRecording }: TaskManagementPanelProps) {
         </div>
 
         {/* Filter Tabs */}
-        <Tabs value={filter} onValueChange={(value) => setFilter(value as any)}>
+        <Tabs value={filter} onValueChange={(value) => setFilter(value as 'all' | 'pending' | 'urgent' | 'completed')}>
           <TabsList className="grid w-full grid-cols-4">
             <TabsTrigger value="all">All ({tasks.length})</TabsTrigger>
             <TabsTrigger value="pending">Pending ({pendingCount})</TabsTrigger>
