@@ -12,48 +12,19 @@ import {
   DropdownMenuSeparator, 
   DropdownMenuTrigger 
 } from '@/components/ui/dropdown-menu';
-import { useUser } from '@auth0/nextjs-auth0';
-import { useRouter } from 'next/navigation';
-
 export default function DashboardLayout({
   children,
 }: {
   children: React.ReactNode;
 }) {
-  const { user, error, isLoading } = useUser();
-  const router = useRouter();
+  
+  // Demo mode - no authentication required
+  const mockUser = {
+    name: 'Sarah Martinez, RN',
+    email: 'sarah.martinez@bilbyai.com.au',
+    picture: '/avatars/sarah-martinez.jpg'
+  };
 
-  // Redirect to login if not authenticated
-  if (!isLoading && !user) {
-    router.push('/api/auth/login');
-    return null;
-  }
-
-  // Loading state
-  if (isLoading) {
-    return (
-      <div className="h-screen bg-background flex items-center justify-center">
-        <div className="text-center">
-          <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary mx-auto"></div>
-          <p className="mt-2 text-sm text-muted-foreground">Loading...</p>
-        </div>
-      </div>
-    );
-  }
-
-  // Error state
-  if (error) {
-    return (
-      <div className="h-screen bg-background flex items-center justify-center">
-        <div className="text-center">
-          <p className="text-red-600">Authentication Error</p>
-          <Button onClick={() => router.push('/api/auth/login')} className="mt-2">
-            Try Again
-          </Button>
-        </div>
-      </div>
-    );
-  }
 
   return (
     <div className="h-screen bg-background flex flex-col">
@@ -101,11 +72,11 @@ export default function DashboardLayout({
                 <Button variant="ghost" className="relative h-10 w-10 rounded-full">
                   <Avatar className="h-10 w-10">
                     <AvatarImage 
-                      src={user?.picture || ''} 
-                      alt={user?.name || 'User'} 
+                      src={mockUser.picture} 
+                      alt={mockUser.name} 
                     />
                     <AvatarFallback>
-                      {user?.name ? user.name.split(' ').map(n => n[0]).join('') : 'U'}
+                      {mockUser.name.split(' ').map(n => n[0]).join('')}
                     </AvatarFallback>
                   </Avatar>
                 </Button>
@@ -114,10 +85,10 @@ export default function DashboardLayout({
                 <DropdownMenuLabel className="font-normal">
                   <div className="flex flex-col space-y-1">
                     <p className="text-sm font-medium leading-none">
-                      {user?.name || 'User'}
+                      {mockUser.name}
                     </p>
                     <p className="text-xs leading-none text-muted-foreground">
-                      {user?.email}
+                      {mockUser.email}
                     </p>
                     <p className="text-xs leading-none text-muted-foreground">
                       Care Coordinator
