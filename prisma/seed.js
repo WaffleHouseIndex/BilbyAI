@@ -35,7 +35,7 @@ async function main() {
       careLevel: 'MEDIUM',
       emergencyContactName: 'Margaret Wilson',
       emergencyContactRelationship: 'Daughter',
-      emergencyContactPhone: '0412 345 678',
+      emergencyContactPhone: '0434 531 840',
       medicalConditions: ['Hypertension', 'Mild Cognitive Impairment', 'Arthritis'],
       medications: {
         create: [

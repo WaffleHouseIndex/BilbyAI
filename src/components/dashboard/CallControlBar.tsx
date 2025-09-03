@@ -200,7 +200,7 @@ export function CallControlBar({ isRecording, onStartCall, onEndCall, currentCal
                   <Button
                     variant="outline"
                     size="sm"
-                    onClick={() => setIsMuted(!isMuted)}
+                    onClick={() => mute(!isMuted)}
                     disabled={!isRecording}
                   >
                     {isMuted ? <MicOff className="h-4 w-4" /> : <Mic className="h-4 w-4" />}

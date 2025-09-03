@@ -3,11 +3,12 @@ import { prisma } from '@/lib/prisma';
 import type { Prisma } from '@/generated/prisma';
 import { getTwilioService, isMockMode } from '@/lib/twilio';
 
-type Params = { params: { id: string } };
-
-export async function POST(request: NextRequest, { params }: Params) {
+export async function POST(
+  request: NextRequest,
+  { params }: { params: Promise<{ id: string }> }
+) {
   try {
-    const { id } = params;
+    const { id } = await params;
     const { consent } = (await request.json()) as { consent: boolean };
 
     if (typeof consent !== 'boolean') {

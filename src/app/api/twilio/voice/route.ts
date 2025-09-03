@@ -9,7 +9,7 @@ function xmlResponse(twiml: string) {
   });
 }
 
-export async function handler(_request: NextRequest) {
+async function handler(_request: NextRequest) {
   const baseUrl = process.env.APP_BASE_URL || '';
   const wsUrl = baseUrl
     ? baseUrl.replace(/^http:/, 'ws:').replace(/^https:/, 'wss:') + '/api/rt-media'

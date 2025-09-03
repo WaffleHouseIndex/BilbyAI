@@ -55,10 +55,10 @@ export function useTwilioDevice(): TwilioDeviceHook {
       const { token } = await response.json();
 
       // Initialize Twilio Device
-      const device = new Device(token, {
+      const deviceOptions: ConstructorParameters<typeof Device>[1] = {
         logLevel: 1, // Set to 2 for more verbose logging
-        codecPreferences: [Device.AudioCodec.Opus, Device.AudioCodec.PCMU],
-      });
+      };
+      const device = new Device(token, deviceOptions);
 
       // Set up event listeners
       device.on('registered', () => {
