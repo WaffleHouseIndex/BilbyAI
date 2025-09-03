@@ -6,7 +6,8 @@
     "dev": "next dev --turbopack --port 3500",
     "build": "next build",
     "start": "next start",
-    "lint": "eslint"
+    "lint": "eslint",
+    "postinstall": "prisma generate"
   },
   "dependencies": {
     "@auth0/nextjs-auth0": "^4.9.0",
