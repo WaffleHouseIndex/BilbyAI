@@ -12,6 +12,8 @@ const geistMono = Geist_Mono({
   subsets: ["latin"],
 });
 
+const allowIndex = process.env.NEXT_PUBLIC_INDEXING === 'true';
+
 export const metadata: Metadata = {
   title: "BilbyAI - AgedCare Phone System Copilot",
   description: "Australian aged care phone system copilot for care coordinators. Reduce documentation time and prevent missed follow-ups with AI-powered transcription and task management.",
@@ -19,7 +21,7 @@ export const metadata: Metadata = {
   authors: [{ name: "BilbyAI" }],
   creator: "BilbyAI",
   publisher: "BilbyAI",
-  robots: "noindex, nofollow", // Development mode
+  robots: allowIndex ? "index, follow" : "noindex, nofollow",
 };
 
 export default function RootLayout({

@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { prisma } from '@/lib/prisma';
+import type { Prisma } from '@/generated/prisma';
 import { getTwilioService, isMockMode } from '@/lib/twilio';
 import { formatAustralianNumber } from '@/lib/phone';
 
@@ -60,19 +61,20 @@ export async function POST(request: NextRequest) {
     // Real Twilio call
     const result = await getTwilioService().initiateCall(to, from, twimlUrl);
 
+    const createData: Record<string, unknown> = {
+      callerName: body.callerName ?? 'Coordinator',
+      callerType: body.callerType ?? 'OUTBOUND',
+      clientName: body.clientName ?? null,
+      consentGiven: Boolean(body.consentGiven),
+      status: 'ACTIVE',
+      twilioSid: result.callSid,
+      toNumber: result.to,
+      fromNumber: result.from,
+      twilioStatus: String(result.status ?? ''),
+    };
+
     const call = await prisma.call.create({
-      // Casting to any to allow writing newly added fields until Prisma client is regenerated
-      data: {
-        callerName: body.callerName ?? 'Coordinator',
-        callerType: body.callerType ?? 'OUTBOUND',
-        clientName: body.clientName ?? null,
-        consentGiven: Boolean(body.consentGiven),
-        status: 'ACTIVE',
-        twilioSid: result.callSid,
-        toNumber: result.to,
-        fromNumber: result.from,
-        twilioStatus: String(result.status ?? ''),
-      } as any,
+      data: createData as unknown as Prisma.CallCreateInput,
     });
 
     return NextResponse.json({
@@ -87,4 +89,3 @@ export async function POST(request: NextRequest) {
     return NextResponse.json({ error: 'Failed to start call' }, { status: 500 });
   }
 }
-

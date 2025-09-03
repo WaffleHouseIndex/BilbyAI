@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { prisma } from '@/lib/prisma';
+import type { Prisma } from '@/generated/prisma';
 import { getTwilioService, isMockMode } from '@/lib/twilio';
 
 type Params = { params: { id: string } };
@@ -13,9 +14,10 @@ export async function POST(request: NextRequest, { params }: Params) {
       return NextResponse.json({ error: 'Missing consent boolean' }, { status: 400 });
     }
 
+    const updateData: Record<string, unknown> = { consentGiven: consent };
     const call = await prisma.call.update({
       where: { id },
-      data: { consentGiven: consent } as any,
+      data: updateData as unknown as Prisma.CallUpdateInput,
     });
 
     if (!isMockMode() && consent && call.twilioSid) {
@@ -28,4 +30,3 @@ export async function POST(request: NextRequest, { params }: Params) {
     return NextResponse.json({ error: 'Failed to update consent' }, { status: 500 });
   }
 }
-

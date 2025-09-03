@@ -20,22 +20,7 @@ import {
   Heart,
   Plus
 } from 'lucide-react';
-
-interface Task {
-  id: string;
-  title: string;
-  description: string;
-  type: 'medical' | 'care' | 'family' | 'documentation' | 'follow-up';
-  priority: 'low' | 'medium' | 'high' | 'urgent';
-  status: 'pending' | 'in-progress' | 'completed';
-  assignedTo: string;
-  clientName: string;
-  dueDate: Date;
-  sourceCall?: string;
-  confidence?: number;
-  completed: boolean;
-  createdAt: Date;
-}
+import type { Task } from '@/types/domain';
 
 interface TaskManagementPanelProps {
   isRecording: boolean;

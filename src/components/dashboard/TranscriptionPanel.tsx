@@ -17,30 +17,7 @@ import {
   CheckCircle,
   AlertCircle
 } from 'lucide-react';
-
-interface TranscriptSegment {
-  id: string;
-  speaker: 'coordinator' | 'client' | 'family' | 'external' | 'other';
-  text: string;
-  timestamp: Date;
-  confidence: number;
-  isPartial?: boolean;
-}
-
-interface Call {
-  id: string;
-  caller: string;
-  callerType: 'family' | 'resident' | 'staff' | 'external' | 'outbound';
-  startTime: Date;
-  endTime?: Date;
-  duration: string;
-  status: 'active' | 'completed' | 'processing';
-  consentGiven: boolean;
-  segments: TranscriptSegment[];
-  summary?: string;
-  confidence: number;
-  clientName?: string;
-}
+import type { TranscriptSegment, Call } from '@/types/domain';
 
 interface TranscriptionPanelProps {
   isRecording: boolean;

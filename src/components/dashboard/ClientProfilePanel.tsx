@@ -18,34 +18,7 @@ import {
   Clock,
   Shield
 } from 'lucide-react';
-
-interface Client {
-  id: string;
-  name: string;
-  age: number;
-  room: string;
-  program: 'HCP' | 'CHSP' | 'NDIS';
-  admissionDate: Date;
-  emergencyContact: {
-    name: string;
-    relationship: string;
-    phone: string;
-  };
-  medicalConditions: string[];
-  medications: Array<{
-    name: string;
-    dosage: string;
-    frequency: string;
-    lastTaken?: Date;
-  }>;
-  careLevel: 'Low' | 'Medium' | 'High' | 'Memory Care';
-  doNotRecord: boolean;
-  recentAlerts: Array<{
-    type: 'medical' | 'behavioral' | 'family' | 'care';
-    message: string;
-    timestamp: Date;
-  }>;
-}
+import type { Client } from '@/types/domain';
 
 export function ClientProfilePanel() {
   const [selectedClient, setSelectedClient] = useState<string>('1');

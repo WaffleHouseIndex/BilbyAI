@@ -1,0 +1,44 @@
+- Context: BilbyAI AgedCare Copilot uses Next.js + Prisma. Dashboard works with mock data; your task is Phase 4: real
+  telephony (Twilio), real-time speech (Azure), and AI processing. Start with the plan in docs/PHASE4_PLAN.md.
+  - Onboarding:
+      - Read NEXT_DEVELOPER_GUIDE.md, QUICK_START.md, CURRENT_STATUS.md, and docs/PHASE4_PLAN.md.
+      - Create .env.local from .env.example. For demo, set NEXT_PUBLIC_MOCK_MODE=true. Set APP_BASE_URL=http://
+  localhost:3500.
+      - Install and run: npm install, npm run dev, then open http://localhost:3500/dashboard.
+      - Verify mock: “Start Call” toggles live UI; /api/twilio/token returns 501 in mock mode.
+      - Real mode: Set Twilio (TWILIO_ACCOUNT_SID, TWILIO_AUTH_TOKEN, TWILIO_API_KEY, TWILIO_API_SECRET,
+  TWILIO_TWIML_APP_SID, TWILIO_PHONE_NUMBER) and Azure (AZURE_SPEECH_KEY, AZURE_SPEECH_REGION=australiaeast); set
+  NEXT_PUBLIC_MOCK_MODE=false.
+  - Goals (Phase 4):
+      - Telephony: Implement POST /api/calls/start, POST /api/twilio/voice TwiML, expand /api/twilio/status to persist
+  call lifecycle. Consent toggle updates Twilio recording.
+      - Real-time speech: Stream Twilio Media Streams to server; forward to Azure Speech; broadcast segments to UI via
+  SSE/WebSocket.
+      - AI processing: Extract tasks in real time (with confidence), and generate post-call summaries/case notes.
+  Respect “Do Not Record” and redact sensitive data.
+      - Persistence: Store Calls, TranscriptSegments, Tasks via Prisma; standardize Prisma directUrl naming across
+  schema and envs.
+      - UI & DX: Single source of call state; extract getCallStatus to src/lib/call.ts; centralize UI mappings in src/
+  lib/uiMaps.ts; move mock constants out of components; tighten RSC boundary for /dashboard and lazy-load heavy tabs.
+  - Immediate next steps:
+      - Add POST /api/calls/start using getTwilioService().initiateCall() and persist call SID.
+      - Add POST /api/twilio/voice to return TwiML; mock-friendly behavior when NEXT_PUBLIC_MOCK_MODE=true.
+      - Expand /api/twilio/status to write statuses to DB with Prisma.
+      - Decide Prisma directUrl variable name and align schema.prisma + .env.example.
+  - Acceptance criteria:
+      - Real call can be placed and status updates persist.
+      - Consent toggle triggers Twilio recording API.
+      - Live transcript appears with ≤3s latency; partials collapse to finals.
+      - At least one AI-extracted task and a draft summary after call end.
+      - Unit tests pass for src/lib/phone.ts, src/lib/uiMaps.ts, and src/lib/date.ts (extract getTimeUntilDue);
+  integration smoke tests pass.
+  - Commands:
+      - Dev: npm run dev
+      - Build: npm run build
+      - Start: npm run start
+      - Lint: npm run lint
+      - Type-check: npm run type-check (add if missing)
+      - Tests: npm test (add Jest config as needed)
+  - Notes:
+      - Use APP_BASE_URL for Twilio callbacks. NEXT_PUBLIC_INDEXING controls robots meta.
+      - In mock mode, /api/twilio/token returns 501 and the UI simulates a call without Twilio.

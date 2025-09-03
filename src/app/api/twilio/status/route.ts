@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { prisma } from '@/lib/prisma';
-import { Prisma } from '@/generated/prisma';
+import type { Prisma } from '@/generated/prisma';
 
 export async function POST(request: NextRequest) {
   try {
@@ -22,47 +22,48 @@ export async function POST(request: NextRequest) {
 
     // Persist/update call lifecycle in database
     const now = new Date();
-    const toUpdate: Prisma.CallUpdateInput = {
-      twilioStatus: callStatus,
-    } as any;
+    const toUpdate: Record<string, unknown> = {
+      twilioStatus: callStatus ?? undefined,
+    };
 
     // Map Twilio status to app status
     // initiated/ringing/queued => PROCESSING; answered/in-progress => ACTIVE; completed => COMPLETED
     const normalized = (callStatus || '').toLowerCase();
     if (['initiated', 'ringing', 'queued'].includes(normalized)) {
-      (toUpdate as any).status = 'PROCESSING';
+      (toUpdate as Record<string, unknown>).status = 'PROCESSING';
     } else if (['in-progress', 'answered'].includes(normalized)) {
-      (toUpdate as any).status = 'ACTIVE';
+      (toUpdate as Record<string, unknown>).status = 'ACTIVE';
     } else if (normalized === 'completed') {
-      (toUpdate as any).status = 'COMPLETED';
-      (toUpdate as any).endTime = now;
-      if (duration) (toUpdate as any).duration = String(duration);
+      (toUpdate as Record<string, unknown>).status = 'COMPLETED';
+      (toUpdate as Record<string, unknown>).endTime = now;
+      if (duration) (toUpdate as Record<string, unknown>).duration = String(duration);
     }
 
-    (toUpdate as any).toNumber = to ?? undefined;
-    (toUpdate as any).fromNumber = from ?? undefined;
+    (toUpdate as Record<string, unknown>).toNumber = to ?? undefined;
+    (toUpdate as Record<string, unknown>).fromNumber = from ?? undefined;
 
     try {
       await prisma.call.update({
         where: { twilioSid: callSid },
-        data: toUpdate,
+        data: toUpdate as unknown as Prisma.CallUpdateInput,
       });
-    } catch (e) {
+    } catch (_e) {
       // If the call doesn't exist yet, create a minimal record
+      const createData: Record<string, unknown> = {
+        callerName: 'Coordinator',
+        callerType: 'OUTBOUND',
+        clientName: null,
+        status: 'PROCESSING',
+        twilioSid: callSid,
+        toNumber: to ?? undefined,
+        fromNumber: from ?? undefined,
+        twilioStatus: callStatus ?? undefined,
+        startTime: now,
+      };
       await prisma.call.upsert({
         where: { twilioSid: callSid },
-        update: toUpdate,
-        create: {
-          callerName: 'Coordinator',
-          callerType: 'OUTBOUND',
-          clientName: null,
-          status: 'PROCESSING',
-          twilioSid: callSid,
-          toNumber: to ?? undefined,
-          fromNumber: from ?? undefined,
-          twilioStatus: callStatus ?? undefined,
-          startTime: now,
-        } as any,
+        update: toUpdate as unknown as Prisma.CallUpdateInput,
+        create: createData as unknown as Prisma.CallCreateInput,
       });
     }
 
