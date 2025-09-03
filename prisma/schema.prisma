@@ -9,7 +9,8 @@ generator client {
 datasource db {
   provider = "postgresql"
   url      = env("DATABASE_URL")
-  directUrl = env("POSTGRES_URL_NON_POOLING")
+  // Use a consistent direct connection URL for migrations and CI
+  directUrl = env("DIRECT_URL")
 }
 
 // User Management and Authentication
@@ -129,6 +130,11 @@ model Call {
   status       CallStatus @default(ACTIVE)
   consentGiven Boolean    @default(false)
   confidence   Float?
+  // Twilio integration fields
+  twilioSid    String?    @unique
+  toNumber     String?
+  fromNumber   String?
+  twilioStatus String?
 
   // AI Generated Summary
   summary String?
