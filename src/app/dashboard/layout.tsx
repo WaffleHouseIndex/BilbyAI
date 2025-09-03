@@ -134,11 +134,9 @@ export default function DashboardLayout({
                   <span>System Settings</span>
                 </DropdownMenuItem>
                 <DropdownMenuSeparator />
-                <DropdownMenuItem>
-                  <a href="/api/auth/logout" className="flex items-center w-full">
-                    <LogOut className="mr-2 h-4 w-4" />
-                    <span>Log out</span>
-                  </a>
+                <DropdownMenuItem className="flex items-center w-full">
+                  <LogOut className="mr-2 h-4 w-4" />
+                  <span>Log out (Demo Mode)</span>
                 </DropdownMenuItem>
               </DropdownMenuContent>
             </DropdownMenu>
