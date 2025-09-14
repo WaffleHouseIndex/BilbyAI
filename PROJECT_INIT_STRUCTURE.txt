@@ -1,0 +1,28 @@
+bilbyaiv2/
+├── example/                        # Inspiration folder 
+├── src/
+│   ├── app/                        # Next.js App Router
+│   │   ├── layout.js
+│   │   ├── page.js                 # Main dashboard (DialPad + Transcript)
+│   │   └── api/
+│   │       ├── token/route.js      # Issues Twilio Access Tokens
+│   │       ├── twilio/route.js     # Webhook for inbound Twilio calls (returns TwiML)
+│   │       └── stream/route.js     # (Optional) WS endpoint for Media Streams
+│   │
+│   ├── components/                 # Reusable React UI components
+│   │   ├── DialPad.js
+│   │   ├── TranscriptPanel.js
+│   │   └── CallHistory.js
+│   │
+│   ├── lib/                        # Utility libraries & service wrappers
+│   │   ├── twilio.js               # Twilio client & token helpers
+│   │   └── transcribe.js           # AWS Transcribe streaming wrapper
+│   │
+│   └── styles/                     # Optional (CSS modules, Tailwind, etc.)
+│
+├── public/                         # Static files
+│
+├── package.json
+├── next.config.js
+├── .env.local                      # Environment variables
+└── README.md
