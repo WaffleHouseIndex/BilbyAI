@@ -98,6 +98,8 @@ AWS_SECRET_ACCESS_KEY=xxxx
 5. Never add transcript persistence; always stream + discard.
 6. Assume **AU region** for both Twilio (`edge: 'sydney'`) and AWS (`ap-southeast-2`).
 7. Write minimal, composable functions (easier for me to extend later).
+8. Use idiomatic conventions for coding languages + frameworks
+9. Make sure to stay on task and do not build bloat features
 
 ---
 

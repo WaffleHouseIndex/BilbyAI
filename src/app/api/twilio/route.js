@@ -6,8 +6,8 @@ export async function POST(request) {
   // Build full URL for signature validation
   const incomingUrl = new URL(request.url);
   const base = computeBaseUrl(request);
-  const fullUrl = `${base}${incomingUrl.pathname}`;
-
+  // Include search params to match Twilio's signing input exactly
+  const fullUrl = `${base}${incomingUrl.pathname}${incomingUrl.search}`;
   // Parse form and validate signature
   const params = await parseFormBody(request);
   const signature = request.headers.get('x-twilio-signature') || '';
@@ -22,8 +22,8 @@ export async function POST(request) {
     return new Response('Invalid Twilio signature', { status: 403 });
   }
 
-  // Determine agent identity to dial
-  const userId = incomingUrl.searchParams.get('userId') || 'demo';
+  // Determine agent identity to dial (accept both userId and userid)
+  const userId = incomingUrl.searchParams.get('userId') || incomingUrl.searchParams.get('userid') || 'demo';
   const identity = `agent_${userId}`;
 
   // Build WSS URL for media stream

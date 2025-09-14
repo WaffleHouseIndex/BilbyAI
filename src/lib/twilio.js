@@ -12,11 +12,19 @@ function getEnv(name, required = true) {
 }
 
 export function computeBaseUrl(request) {
+  // Prefer forwarded headers from the actual request as they reflect
+  // the externally visible URL Twilio called via proxies/tunnels.
+  const host = request.headers.get('x-forwarded-host') || request.headers.get('host');
+  const protoHeader = request.headers.get('x-forwarded-proto');
+  const proto = protoHeader || (host && host.includes('localhost') ? 'http' : 'https');
+  if (host) return `${proto}://${host}`;
+
+  // Fallback to PUBLIC_URL only if headers are unavailable
   const publicUrl = process.env.PUBLIC_URL;
   if (publicUrl) return publicUrl.replace(/\/$/, '');
-  const host = request.headers.get('x-forwarded-host') || request.headers.get('host');
-  const proto = request.headers.get('x-forwarded-proto') || 'https';
-  return `${proto}://${host}`;
+
+  // Last resort for local dev
+  return 'http://localhost:3000';
 }
 
 export function makeAccessToken({ identity, ttlSeconds = 900 }) {
@@ -81,4 +89,3 @@ export function validateTwilioSignature({ authToken, signature, url, params }) {
   if (!authToken) return false;
   return twilio.validateRequest(authToken, signature, url, params || {});
 }
-

@@ -36,7 +36,7 @@ M1 — Backend foundation
   - [x] Validate Twilio signature on webhook.
 - Acceptance:
   - [ ] Hitting `/api/token` returns a valid token (verified by Voice SDK registration).
-  - [ ] Twilio Console can `curl` webhook and receives valid TwiML.
+  - [x] Twilio webhook POST validates signature and returns TwiML (confirmed via ngrok logs).
 
 M2 — Transcription pipeline
 - Tasks:
@@ -192,3 +192,4 @@ Security/compliance
 
 - 2025-09-14: Initial plan and progress tracker added.
 - 2025-09-14: Implemented M1 APIs — `/api/token` (Access Token) and `/api/twilio` (TwiML webhook with signature validation). Added Twilio SDK dependency.
+- 2025-09-14: Added (then removed) temporary debug flags for Twilio signature validation after resolving AU1 vs US1 Auth Token mismatch. Code reverted to clean validation.
