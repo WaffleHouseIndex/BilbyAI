@@ -77,14 +77,19 @@ export default function TranscriptPanel({ room = 'agent_demo', token = 'dev' }) 
       </div>
       <div className="h-64 overflow-auto border rounded p-3 bg-white">
         {messages.length === 0 ? (
-          <div className="text-gray-500 text-sm">Waiting for live transcripts…</div>
+          <div className="text-black text-sm">Waiting for live transcripts…</div>
         ) : (
-          messages.map((m) => (
-            <div key={`${m.segmentId}-${m.ts}`} className="mb-1">
-              <span className="text-xs text-gray-400 mr-2">{new Date(m.ts).toLocaleTimeString()}</span>
-              <span className={m.isFinal ? '' : 'opacity-70 italic'}>{m.text}</span>
-            </div>
-          ))
+          messages.map((m, idx) => {
+            const isLast = idx === messages.length - 1;
+            const colorClass = isLast ? 'text-black' : 'text-black opacity-70';
+            const italicClass = m.isFinal ? '' : 'italic';
+            return (
+              <div key={`${m.segmentId}-${m.ts}`} className="mb-1">
+                <span className={`${colorClass} ${italicClass}`}>{new Date(m.ts).toLocaleTimeString()+"     "}</span>
+                <span className={`${colorClass} ${italicClass}`}>{m.text}</span>
+              </div>
+            );
+          })
         )}
       </div>
     </div>
