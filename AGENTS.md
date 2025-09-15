@@ -103,6 +103,13 @@ AWS_SECRET_ACCESS_KEY=xxxx
 
 ---
 
+## Tool use
+
+1. When coding Twilio features ensure to consult the Twilio mcp tool
+2. When coding other features consult Context7 mcp tool for API documentation
+
+---
+
 ## 🚀 First Tasks for Agent
 1. Implement `/api/token` to generate Twilio Access Tokens.
 2. Implement `/api/twilio` webhook to return TwiML with `<Start><Stream>`.

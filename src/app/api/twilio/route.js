@@ -25,10 +25,15 @@ export async function POST(request) {
   // Determine agent identity to dial (accept both userId and userid)
   const userId = incomingUrl.searchParams.get('userId') || incomingUrl.searchParams.get('userid') || 'demo';
   const identity = `agent_${userId}`;
+  // Debug/testing mode: if hold=1, do not Dial a client; instead Pause to keep call open
+  const hold = incomingUrl.searchParams.get('hold') === '1' || incomingUrl.searchParams.get('nodial') === '1';
 
   // Build WSS URL for media stream
-  const wsBase = base.replace(/^http/i, 'ws');
-  const streamUrl = `${wsBase}/api/stream`;
+  // Prefer explicit STREAM_BASE_URL (e.g., wss://stream.example.com)
+  const configuredBase = (process.env.STREAM_BASE_URL || '').replace(/\/$/, '');
+  const wsBase = configuredBase || base.replace(/^http/i, 'ws');
+  // Include a room param so observers can subscribe by identity
+  const streamUrl = `${wsBase}/api/stream?room=${encodeURIComponent(identity)}&token=dev`;
 
   // Optional consent message via env
   const consentMessage = process.env.CONSENT_MESSAGE || '';
@@ -38,6 +43,9 @@ export async function POST(request) {
     clientIdentity: identity,
     consentMessage,
     language: 'en-AU',
+    dialClient: !hold,
+    track: process.env.STREAM_TRACK,
+    pauseSeconds: parseInt(process.env.TEST_HOLD_SECONDS || '60', 10),
   });
 
   return new Response(twiml, {

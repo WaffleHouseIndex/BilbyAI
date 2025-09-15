@@ -50,7 +50,7 @@ export function makeAccessToken({ identity, ttlSeconds = 900 }) {
   return token.toJwt();
 }
 
-export function buildInboundTwiml({ wsUrl, clientIdentity, consentMessage, language = 'en-AU' }) {
+export function buildInboundTwiml({ wsUrl, clientIdentity, consentMessage, language = 'en-AU', dialClient = true, pauseSeconds = 60, track }) {
   const { twiml } = twilio;
   const response = new twiml.VoiceResponse();
 
@@ -59,10 +59,15 @@ export function buildInboundTwiml({ wsUrl, clientIdentity, consentMessage, langu
   }
 
   const start = response.start();
-  start.stream({ url: wsUrl, track: 'both_tracks' });
+  const chosenTrack = track || process.env.STREAM_TRACK || 'inbound_track';
+  start.stream({ url: wsUrl, track: chosenTrack });
 
-  const dial = response.dial();
-  dial.client({}, clientIdentity);
+  if (dialClient) {
+    const dial = response.dial();
+    dial.client({}, clientIdentity);
+  } else {
+    response.pause({ length: pauseSeconds });
+  }
 
   return response.toString();
 }

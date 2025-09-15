@@ -40,10 +40,12 @@ M1 — Backend foundation
 
 M2 — Transcription pipeline
 - Tasks:
-  - [ ] `src/lib/transcribe.js`: AWS Transcribe Streaming wrapper (region `ap-southeast-2`).
-  - [ ] `/api/stream`: WS endpoint bridging Twilio Media Streams to AWS Transcribe; emits normalized transcript events to client.
+  - [x] src/lib/transcribe.js: minimal wrapper + mock mode; normalized events.
+  - [x] /api/stream: Edge WS (mock) and standalone Node AWS WS bridge.
+  - [x] µ-law→PCM16 fix @ 8kHz; inbound-only default; punctuation enabled.
+  - [x] Observer broadcast by room with fallback; TranscriptPanel rendering.
 - Acceptance:
-  - [ ] Local WS test can send mocked Twilio frames and receive transcript-like events (mocked or real, behind feature flag).
+  - [x] E2E inbound (AU): consent → Media Streams → AWS → UI shows partial/final in ~1–2s; no persistence.
 
 M3 — Outbound calling UI
 - Tasks:
@@ -54,7 +56,7 @@ M3 — Outbound calling UI
 
 M4 — Live transcription UI
 - Tasks:
-  - [ ] `src/components/TranscriptPanel.js`: Subscribe to `/api/stream` and render partial/final segments.
+  - [x] `src/components/TranscriptPanel.js`: Subscribe to `/api/stream` and render partial/final segments.
   - [ ] Channel labeling (caller/agent) if available; minimal styling.
 - Acceptance:
   - [ ] During a call, partial transcripts appear within ~1–2s; final segments replace partials.
@@ -91,20 +93,20 @@ M7 — Deployment & Twilio/AWS config
 ## 3) Work Breakdown (Detailed Tasks)
 
 Backend
-- [ ] `src/lib/twilio.js`: create Access Token (VoiceGrant), AU edge, helpers.
-- [ ] `src/app/api/token/route.js`: returns signed token, identity `agent_{USER_ID}`.
-- [ ] `src/app/api/twilio/route.js`: TwiML response, optional consent, webhook signature validation.
-- [ ] `src/lib/transcribe.js`: connect, send PCM frames, surface transcript events.
-- [ ] `src/app/api/stream/route.js`: WS upgrade, handle `start`, `media`, `stop` frames, forward to Transcribe, broadcast transcripts.
+- [x] `src/lib/twilio.js`: create Access Token (VoiceGrant), AU edge, helpers.
+- [x] `src/app/api/token/route.js`: returns signed token, identity `agent_{USER_ID}`.
+- [x] `src/app/api/twilio/route.js`: TwiML response, optional consent, webhook signature validation.
+- [x] `src/lib/transcribe.js`: connect, send PCM frames, surface transcript events.
+- [x] `src/app/api/stream/route.js`: WS upgrade, handle `start`, `media`, `stop` frames, forward to Transcribe, broadcast transcripts.
 
 Frontend
 - [ ] `src/components/DialPad.js`: keypad UI, register `Twilio.Device`, start/stop, mute, device chooser, simple status.
-- [ ] `src/components/TranscriptPanel.js`: WS client, merge partial/final, scroll management, channel labels.
+- [x] `src/components/TranscriptPanel.js`: WS client, merge partial/final, scroll management, channel labels.
 - [ ] `src/components/CallHistory.js`: session-only list (no persistence) with timestamps and duration.
-- [ ] Integrate in `src/app/page.js`: layout with DialPad + TranscriptPanel.
+- [x] Integrate in `src/app/page.js`: layout with DialPad + TranscriptPanel.
 
 Security & Privacy
-- [ ] Twilio signature validation utility.
+- [x] Twilio signature validation utility.
 - [ ] Short-lived tokens; revoke/refresh flow.
 - [ ] Per-call session token for WS (query param or header), expiry ≤ 15 minutes.
 - [ ] Redaction: logs avoid content and sensitive identifiers.
@@ -129,10 +131,10 @@ Documentation
 ## 4) Progress Tracker
 
 High-level summary
-- M1 Backend foundation: [ ]
-- M2 Transcription pipeline: [ ]
+- M1 Backend foundation: [~]
+- M2 Transcription pipeline: [x]
 - M3 Outbound calling UI: [ ]
-- M4 Live transcription UI: [ ]
+- M4 Live transcription UI: [x]
 - M5 Security & compliance: [ ]
 - M6 E2E & hardening: [ ]
 - M7 Deployment & config: [ ]
@@ -141,12 +143,12 @@ Task checklist (rolling)
 - [x] Create development plan & tracker (this document)
 - [x] Implement `/api/token`
 - [x] Implement `/api/twilio`
-- [ ] Implement `src/lib/transcribe.js`
-- [ ] Implement `/api/stream`
+- [x] Implement `src/lib/transcribe.js`
+- [x] Implement `/api/stream`
 - [ ] Build `DialPad.js`
-- [ ] Build `TranscriptPanel.js`
-- [ ] Add signature verification + WS auth
-- [ ] Manual E2E pass
+- [x] Build `TranscriptPanel.js`
+- [ ] Add WS auth (HMAC)
+- [x] Manual E2E pass (inbound)
 - [ ] Deployment runbook
 
 ---
@@ -162,7 +164,7 @@ Outbound call
 Inbound call
 - [ ] Call AU number; consent message plays (if enabled).
 - [ ] TwiML dials `client:agent_{USER_ID}` and starts media stream.
-- [ ] UI shows live transcripts; stop on hangup.
+- [x] UI shows live transcripts; stop on hangup.
 
 Security/compliance
 - [ ] Unauthenticated calls to `/api/stream` are rejected.
@@ -193,3 +195,70 @@ Security/compliance
 - 2025-09-14: Initial plan and progress tracker added.
 - 2025-09-14: Implemented M1 APIs — `/api/token` (Access Token) and `/api/twilio` (TwiML webhook with signature validation). Added Twilio SDK dependency.
 - 2025-09-14: Added (then removed) temporary debug flags for Twilio signature validation after resolving AU1 vs US1 Auth Token mismatch. Code reverted to clean validation.
+
+---
+
+## 9) M2 Progress Summary (Done)
+
+What works
+- Inbound call flow (AU) with consent ? Media Streams ? Node WS bridge ? AWS Transcribe (ap-southeast-2) ? TranscriptPanel.
+- Accurate decode (�-law ? PCM16 @ 8kHz) with inbound-only default; automatic punctuation enabled.
+- Webhook supports STREAM_BASE_URL, hold=1 (Pause) for testing without a registered client, and room parameter for observers.
+- Observer broadcasting by room; fallback broadcasting when producer has no room attached.
+
+Validation procedure
+- Expose two tunnels via ngrok: webhook (Next) and stream (Node WS).
+- Configure number Voice webhook to /api/twilio?userId=demo&hold=1.
+- Set .env.local: AWS creds, TRANSCRIBE_LANGUAGE=en-AU, TRANSCRIBE_SAMPLE_RATE=8000, STREAM_BASE_URL=wss://<ngrok-stream>, MOCK_STREAM_ALLOW_NO_AUTH=true.
+- Call number and speak; transcripts appear in http://localhost:3000 panel within ~1�2s.
+
+Known limitations
+- WS auth uses a dev token; will replace with HMAC short-lived token.
+- No outbound DialPad yet; testing uses hold=1.
+- 8kHz PSTN audio limits fidelity; browser leg (future DialPad) can be higher quality.
+
+## 10) M3 Plan � Outbound Calling UI + Polished Layout
+
+Goals
+- Register a Twilio Device in browser (edge sydney), place and receive calls.
+- Polished two-column layout inspired by /example/ui: DialPad + Transcript, with status/indicators.
+- Keep compliance: short-lived access tokens, no persistence, AU-only.
+
+Tasks
+1) Install Voice SDK
+- Add dependency @twilio/voice-sdk and lightweight device init wrapper.
+
+2) Device registration
+- Component src/components/DialPad.js (client component):
+  - Fetch token from /api/token?userId=<id>; identity gent_<id>.
+  - Initialize Twilio.Device with edge: 'sydney', reconnect/backoff handlers.
+  - Show registration status (ready/offline/error), audio device selectors, mute/volume.
+
+3) Outbound call controls
+- Destination input (E.164 or client:...).
+- Buttons: Connect, Hang up, Mute/Unmute, Hold/Resume.
+- Display call duration, basic quality warnings.
+
+4) Server TwiML for outbound
+- Add /api/voice/outgoing (Node runtime) to return TwiML <Dial><Number>{To}</Number> or <Client> based on params.
+- Device connects with params { To }; Twilio fetches from /api/voice/outgoing.
+
+5) Integrate with transcription
+- Keep webhook /api/twilio for inbound, Media Streams to Node AWS WS (unchanged).
+- For outbound Device calls, apply same Media Streams policy (configurable by number/app) or bridge via conference if needed (later milestone).
+- TranscriptPanel continues to subscribe to oom=agent_<id>.
+
+6) UI polish (inspired by /example/ui)
+- App shell: top bar with agent name/status, main content split into DialPad (left) and Transcript (right).
+- Use accessible components (buttons, inputs, tabs) and provide responsive layout.
+- Add minimal toasts/snackbar for errors (e.g., token failure, device errors).
+
+7) Acceptance criteria
+- Device registers successfully using /api/token and edge: 'sydney'.
+- User can dial a PSTN number; call audio flows; Transcript panel remains functional for inbound tests.
+- UI presents clear states: registered, ringing, in-call, ended; mute toggles visible.
+
+8) Risks/notes
+- Browser autoplay/mic permissions � prompt flow and device selection UX.
+- Outbound Media Streams for Device calls may require configuring the number/app; for MVP we validate registration + outbound audio first, then wire transcription for outbound sessions.
+- Continue to avoid persistence; redact logs.
