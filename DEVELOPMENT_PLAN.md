@@ -49,10 +49,11 @@ M2 — Transcription pipeline
 
 M3 — Outbound calling UI
 - Tasks:
-  - [ ] `src/components/DialPad.js`: Keypad, connect/disconnect, mute, input for destination, audio device picker.
-  - [ ] Device registration using `/api/token`, `edge: 'sydney'`, reconnect handling.
+  - [x] `src/components/DialPad.js`: keypad UI, connect/disconnect, mute, destination input.
+  - [x] Device registration using `/api/token`, `edge: 'sydney'`.
+  - [x] TwiML App flow: add `TWIML_APP_SID` to token; Device.connect sends params to TwiML App → `/api/voice/bridge` TwiML.
 - Acceptance:
-  - [ ] Can place an outbound call and hear audio (loopback or test number).
+  - [X] Can place an outbound call and hear audio (loopback or test number).
 
 M4 — Live transcription UI
 - Tasks:
@@ -98,9 +99,10 @@ Backend
 - [x] `src/app/api/twilio/route.js`: TwiML response, optional consent, webhook signature validation.
 - [x] `src/lib/transcribe.js`: connect, send PCM frames, surface transcript events.
 - [x] `src/app/api/stream/route.js`: WS upgrade, handle `start`, `media`, `stop` frames, forward to Transcribe, broadcast transcripts.
+- [x] `src/app/api/voice/bridge/route.js`: TwiML bridge to PSTN with `<Start><Stream>` (used by TwiML App).
 
-Frontend
-- [ ] `src/components/DialPad.js`: keypad UI, register `Twilio.Device`, start/stop, mute, device chooser, simple status.
+ Frontend
+ - [x] `src/components/DialPad.js`: register `Twilio.Device` + `Device.connect` via TwiML App; mute/hangup/status.
 - [x] `src/components/TranscriptPanel.js`: WS client, merge partial/final, scroll management, channel labels.
 - [ ] `src/components/CallHistory.js`: session-only list (no persistence) with timestamps and duration.
 - [x] Integrate in `src/app/page.js`: layout with DialPad + TranscriptPanel.
@@ -133,19 +135,20 @@ Documentation
 High-level summary
 - M1 Backend foundation: [~]
 - M2 Transcription pipeline: [x]
-- M3 Outbound calling UI: [ ]
+- M3 Outbound calling UI: [~]
 - M4 Live transcription UI: [x]
 - M5 Security & compliance: [ ]
 - M6 E2E & hardening: [ ]
 - M7 Deployment & config: [ ]
 
-Task checklist (rolling)
+ Task checklist (rolling)
 - [x] Create development plan & tracker (this document)
 - [x] Implement `/api/token`
 - [x] Implement `/api/twilio`
 - [x] Implement `src/lib/transcribe.js`
 - [x] Implement `/api/stream`
 - [ ] Build `DialPad.js`
+- [x] Build `DialPad.js`
 - [x] Build `TranscriptPanel.js`
 - [ ] Add WS auth (HMAC)
 - [x] Manual E2E pass (inbound)
@@ -246,7 +249,8 @@ Tasks
 5) Integrate with transcription
 - Keep webhook /api/twilio for inbound, Media Streams to Node AWS WS (unchanged).
 - For outbound Device calls, apply same Media Streams policy (configurable by number/app) or bridge via conference if needed (later milestone).
-- TranscriptPanel continues to subscribe to oom=agent_<id>.
+- TranscriptPanel continues to subscribe to 
+oom=agent_<id>.
 
 6) UI polish (inspired by /example/ui)
 - App shell: top bar with agent name/status, main content split into DialPad (left) and Transcript (right).

@@ -31,6 +31,7 @@ export function makeAccessToken({ identity, ttlSeconds = 900 }) {
   const accountSid = getEnv('TWILIO_ACCOUNT_SID');
   const apiKey = getEnv('TWILIO_API_KEY');
   const apiSecret = getEnv('TWILIO_API_SECRET');
+  const region = getEnv('TWILIO_REGION');
 
   const { jwt } = twilio;
   const { AccessToken } = jwt;
@@ -39,12 +40,17 @@ export function makeAccessToken({ identity, ttlSeconds = 900 }) {
   const token = new AccessToken(accountSid, apiKey, apiSecret, {
     identity,
     ttl: ttlSeconds,
+    region,
   });
 
-  const voiceGrant = new VoiceGrant({
-    incomingAllow: true,
-    // Optional: set outgoingApplicationSid here when ready for outbound
-  });
+  const voiceGrantOptions = { incomingAllow: true };
+  const appSid = process.env.TWIML_APP_SID;
+  if (appSid && appSid !== '...') {
+    voiceGrantOptions.outgoingApplicationSid = appSid;
+    // Provide minimal default params; Device.connect can override per-call
+    voiceGrantOptions.outgoingApplicationParams = {};
+  }
+  const voiceGrant = new VoiceGrant(voiceGrantOptions);
   token.addGrant(voiceGrant);
 
   return token.toJwt();
@@ -67,6 +73,28 @@ export function buildInboundTwiml({ wsUrl, clientIdentity, consentMessage, langu
     dial.client({}, clientIdentity);
   } else {
     response.pause({ length: pauseSeconds });
+  }
+
+  return response.toString();
+}
+
+export function buildBridgeTwiml({ wsUrl, to, consentMessage, language = 'en-AU', track }) {
+  const { twiml } = twilio;
+  const response = new twiml.VoiceResponse();
+
+  if (consentMessage) {
+    response.say({ voice: 'alice', language }, consentMessage);
+  }
+
+  const start = response.start();
+  const chosenTrack = track || process.env.STREAM_TRACK || 'inbound_track';
+  start.stream({ url: wsUrl, track: chosenTrack });
+
+  const dial = response.dial();
+  if (to && to.toString().startsWith('client:')) {
+    dial.client({}, to.toString().slice('client:'.length));
+  } else {
+    dial.number({}, to);
   }
 
   return response.toString();

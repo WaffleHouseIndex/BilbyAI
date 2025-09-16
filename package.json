@@ -17,7 +17,8 @@
     "react-dom": "19.1.0",
     "twilio": "^5.9.0",
     "@aws-sdk/client-transcribe-streaming": "^3.679.0",
-    "lucide-react": "^0.462.0"
+    "lucide-react": "^0.462.0",
+    "@twilio/voice-sdk": "^2.7.4"
   },
   "devDependencies": {
     "@eslint/eslintrc": "^3",

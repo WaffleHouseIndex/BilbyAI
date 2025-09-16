@@ -8,11 +8,10 @@ export async function GET(request) {
     const userId = searchParams.get('userId') || 'demo';
     const identity = `agent_${userId}`;
     const ttl = parseInt(process.env.TOKEN_TTL_SECONDS || '900', 10);
-
     const token = makeAccessToken({ identity, ttlSeconds: ttl });
 
     return new Response(
-      JSON.stringify({ token, identity, ttl }),
+      JSON.stringify({ token, identity, ttl}),
       { status: 200, headers: { 'content-type': 'application/json' } }
     );
   } catch (err) {
