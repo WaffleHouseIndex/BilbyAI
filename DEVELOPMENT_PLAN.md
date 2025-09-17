@@ -58,9 +58,9 @@ M3 — Outbound calling UI
 M4 — Live transcription UI
 - Tasks:
   - [x] `src/components/TranscriptPanel.js`: Subscribe to `/api/stream` and render partial/final segments.
-  - [ ] Channel labeling (caller/agent) if available; minimal styling.
+  - [x] Channel labeling (caller/agent) if available; minimal styling.
 - Acceptance:
-  - [ ] During a call, partial transcripts appear within ~1–2s; final segments replace partials.
+  - [x] During a call, partial transcripts appear within ~1–2s; final segments replace partials. (Validated 2025-09-16 with dual-track Twilio Media Streams and AWS bridge.)
 
 M5 — Security & compliance
 - Tasks:
@@ -152,6 +152,7 @@ High-level summary
 - [x] Build `TranscriptPanel.js`
 - [ ] Add WS auth (HMAC)
 - [x] Manual E2E pass (inbound)
+- [x] Dual-track transcription (agent + caller)
 - [ ] Deployment runbook
 
 ---

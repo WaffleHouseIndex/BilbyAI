@@ -11,6 +11,15 @@ function getEnv(name, required = true) {
   return v;
 }
 
+function resolveStreamTrack(pref) {
+  const candidate = (pref || process.env.STREAM_TRACK || 'both_tracks').toString();
+  const normalised = candidate.toLowerCase();
+  if (normalised === 'both') return 'both_tracks';
+  if (normalised === 'inbound') return 'inbound_track';
+  if (normalised === 'outbound') return 'outbound_track';
+  return candidate;
+}
+
 export function computeBaseUrl(request) {
   // Prefer forwarded headers from the actual request as they reflect
   // the externally visible URL Twilio called via proxies/tunnels.
@@ -65,7 +74,7 @@ export function buildInboundTwiml({ wsUrl, clientIdentity, consentMessage, langu
   }
 
   const start = response.start();
-  const chosenTrack = track || process.env.STREAM_TRACK || 'inbound_track';
+  const chosenTrack = resolveStreamTrack(track);
   start.stream({ url: wsUrl, track: chosenTrack });
 
   if (dialClient) {
@@ -87,7 +96,7 @@ export function buildBridgeTwiml({ wsUrl, to, consentMessage, language = 'en-AU'
   }
 
   const start = response.start();
-  const chosenTrack = track || process.env.STREAM_TRACK || 'inbound_track';
+  const chosenTrack = resolveStreamTrack(track);
   start.stream({ url: wsUrl, track: chosenTrack });
 
   const dial = response.dial();

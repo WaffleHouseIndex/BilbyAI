@@ -30,6 +30,8 @@ export function createTranscriber(options = {}) {
     languageCode = process.env.TRANSCRIBE_LANGUAGE || 'en-AU',
     sampleRate = parseInt(process.env.TRANSCRIBE_SAMPLE_RATE || '8000', 10),
   } = options;
+  const channel = options.channel || 'mixed';
+  const track = options.track || null;
 
   const emitter = createEmitter();
   let started = false;
@@ -57,15 +59,17 @@ export function createTranscriber(options = {}) {
               ts: now,
               text: 'Mock final transcript segment',
               isFinal: true,
-              channel: 'mixed',
+              channel,
+              track,
               segmentId: sid,
             });
           } else {
             emitter.emit('partial', {
               ts: now,
-              text: 'Mock partial…',
+              text: `Mock partial${channel === 'mixed' ? '' : ` (${channel})`}…`,
               isFinal: false,
-              channel: 'mixed',
+              channel,
+              track,
               segmentId: sid,
             });
           }
@@ -87,7 +91,7 @@ export function createTranscriber(options = {}) {
       emitter.removeAll();
     },
     getInfo() {
-      return { mode, languageCode, sampleRate };
+      return { mode, languageCode, sampleRate, channel, track };
     }
   };
 

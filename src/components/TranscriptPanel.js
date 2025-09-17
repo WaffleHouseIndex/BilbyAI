@@ -21,6 +21,36 @@ function defaultObserverUrl() {
   return `${proto}://localhost:3002/api/stream`;
 }
 
+function normaliseChannel(raw) {
+  if (!raw) return "mixed";
+  const value = raw.toString().toLowerCase();
+  if (value === "inbound") return "caller";
+  if (value === "outbound") return "agent";
+  return value;
+}
+
+function channelLabel(channel) {
+  const normalised = normaliseChannel(channel);
+  if (normalised === "agent") return "Agent";
+  if (normalised === "caller") return "Caller";
+  if (normalised === "mixed") return "Mixed";
+  return normalised.charAt(0).toUpperCase() + normalised.slice(1);
+}
+
+function channelBadgeVariant(channel) {
+  const normalised = normaliseChannel(channel);
+  if (normalised === "agent") return "success";
+  if (normalised === "caller") return "secondary";
+  return "outline";
+}
+
+function channelTextClass(channel) {
+  const normalised = normaliseChannel(channel);
+  if (normalised === "agent") return "text-blue-700";
+  if (normalised === "caller") return "text-emerald-700";
+  return "text-gray-800";
+}
+
 export default function TranscriptPanel({ room = "agent_demo", token = "dev" }) {
   const [messages, setMessages] = useState([]);
   const [status, setStatus] = useState("disconnected");
@@ -54,26 +84,36 @@ export default function TranscriptPanel({ room = "agent_demo", token = "dev" }) 
       try {
         const msg = JSON.parse(e.data);
         if (msg.type === "transcript") {
-          const sid = msg.segmentId || `t${messages.length}`;
+          const channel = normaliseChannel(msg.channel || msg.track);
+          const baseId =
+            msg.segmentId ||
+            msg.resultId ||
+            msg.result_id ||
+            `${channel}-${Math.round((msg.ts || Date.now()) * 1000)}`;
+          const key = `${channel}-${baseId}`;
           const prev =
-            segmentsRef.current.get(sid) ||
+            segmentsRef.current.get(key) ||
             {
               text: "",
               isFinal: false,
               ts: msg.ts,
-              channel: msg.channel,
-              segmentId: sid,
+              channel,
+              track: msg.track || null,
+              segmentId: baseId,
             };
           const merged = {
             ...prev,
             text: msg.text,
             isFinal: !!msg.isFinal,
             ts: msg.ts,
-            channel: msg.channel,
+            channel,
+            track: msg.track || prev.track || null,
           };
-          segmentsRef.current.set(sid, merged);
+          segmentsRef.current.set(key, merged);
           setMessages(
-            Array.from(segmentsRef.current.values()).sort((a, b) => a.ts - b.ts)
+            Array.from(segmentsRef.current.values()).sort(
+              (a, b) => (a.ts || 0) - (b.ts || 0)
+            )
           );
         } else if (msg.type === "ready") {
           // no-op
@@ -132,14 +172,17 @@ export default function TranscriptPanel({ room = "agent_demo", token = "dev" }) 
           ) : (
             messages.map((m, idx) => {
               const isLast = idx === messages.length - 1;
-              const colorClass = isLast ? "text-gray-900" : "text-gray-900/70";
+              const textColor = isLast ? channelTextClass(m.channel) : `${channelTextClass(m.channel)} opacity-80`;
               const italicClass = m.isFinal ? "" : "italic";
+              const timestamp = m.ts ? new Date(m.ts).toLocaleTimeString() : "";
               return (
-                <div key={`${m.segmentId}-${m.ts}`} className="mb-1">
-                  <span className={`${colorClass} ${italicClass} mr-2`}>
-                    {new Date(m.ts).toLocaleTimeString()}
-                  </span>
-                  <span className={`${colorClass} ${italicClass}`}>{m.text}</span>
+                <div key={`${m.channel}-${m.segmentId}-${m.ts}`} className="mb-3">
+                  <div className="flex items-center gap-2 text-xs text-gray-500">
+                    <Badge variant={channelBadgeVariant(m.channel)}>{channelLabel(m.channel)}</Badge>
+                    {timestamp ? <span className="tabular-nums">{timestamp}</span> : null}
+                    {m.isFinal ? null : <span className="italic">partial</span>}
+                  </div>
+                  <div className={`mt-1 text-sm ${italicClass} ${textColor}`}>{m.text}</div>
                 </div>
               );
             })

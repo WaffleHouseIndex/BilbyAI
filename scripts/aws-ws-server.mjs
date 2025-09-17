@@ -21,6 +21,9 @@ const PATH = '/api/stream';
 const REGION = process.env.AWS_REGION || 'ap-southeast-2';
 const LANGUAGE = process.env.TRANSCRIBE_LANGUAGE || 'en-AU';
 const SAMPLE_RATE = parseInt(process.env.TRANSCRIBE_SAMPLE_RATE || '8000', 10);
+const STREAM_ACCEPT_TRACKS = (process.env.STREAM_ACCEPT_TRACKS || 'both').toLowerCase();
+const INBOUND_LABEL = process.env.STREAM_INBOUND_LABEL || 'caller';
+const OUTBOUND_LABEL = process.env.STREAM_OUTBOUND_LABEL || 'agent';
 
 function assertEnv(name) {
   const v = process.env[name];
@@ -87,7 +90,7 @@ function createAudioQueue() {
   };
 }
 
-function normalizeTranscriptEvent(evt) {
+function normalizeTranscriptEvent(evt, channel = 'mixed', track = null) {
   // evt: TranscriptEvent with Transcript.Results[]
   try {
     const results = evt.TranscriptEvent?.Transcript?.Results || [];
@@ -102,7 +105,8 @@ function normalizeTranscriptEvent(evt) {
         ts: Date.now(),
         text,
         isFinal,
-        channel: 'mixed',
+        channel,
+        track,
         segmentId: r.ResultId || undefined,
       });
     }
@@ -110,6 +114,31 @@ function normalizeTranscriptEvent(evt) {
   } catch (e) {
     return [];
   }
+}
+
+function normaliseTrack(raw) {
+  const value = (raw || '').toString().toLowerCase();
+  if (value === 'outbound') return 'outbound';
+  if (value === 'inbound') return 'inbound';
+  return value || 'inbound';
+}
+
+function isTrackAccepted(track) {
+  switch (STREAM_ACCEPT_TRACKS) {
+    case 'inbound':
+      return track !== 'outbound';
+    case 'outbound':
+      return track === 'outbound';
+    case 'both':
+    default:
+      return true;
+  }
+}
+
+function mapTrackToChannel(track) {
+  if (track === 'outbound') return OUTBOUND_LABEL;
+  if (track === 'inbound') return INBOUND_LABEL;
+  return track || 'mixed';
 }
 
 function createAwsClient() {
@@ -179,21 +208,94 @@ wss.on('connection', async (ws, request) => {
   const { query } = url.parse(request.url, true);
   const isObserver = query?.observer === '1' || query?.role === 'observer';
   const roomId = (query?.room || '').toString() || null;
-  json(ws, { type: 'hello', ts: Date.now(), mode: 'aws', role: isObserver ? 'observer' : 'producer', room: roomId });
+  json(ws, { type: 'hello', ts: Date.now(), mode: 'aws', role: isObserver ? 'observer' : 'producer', room: roomId, tracks: STREAM_ACCEPT_TRACKS });
   if (isObserver && roomId) {
     addObserver(roomId, ws);
   }
   let closed = false;
-  let controller = null; // AbortController for AWS call
   let client = null;
-  let audioQ = null;
+  const sessions = new Map(); // track -> { audioQ, controller, channel, track }
 
   function safeClose(code = 1000, reason = 'normal') {
     if (closed) return;
     closed = true;
-    try { audioQ?.end(); } catch {}
-    try { controller?.abort(); } catch {}
+    for (const session of sessions.values()) {
+      try { session.audioQ?.end(); } catch {}
+      try { session.controller?.abort(); } catch {}
+    }
+    sessions.clear();
     try { ws.close(code, reason); } catch {}
+  }
+
+  function ensureAwsSession(track) {
+    const key = track || 'inbound';
+    let session = sessions.get(key);
+    if (session) return session;
+
+    if (!client) {
+      client = createAwsClient();
+    }
+
+    const audioQ = createAudioQueue();
+    const controller = new AbortController();
+    const channel = mapTrackToChannel(key);
+
+    const command = new StartStreamTranscriptionCommand({
+      LanguageCode: LANGUAGE,
+      MediaEncoding: 'pcm',
+      MediaSampleRateHertz: SAMPLE_RATE,
+      AudioStream: audioQ.iter(),
+      EnablePartialResultsStabilization: true,
+      PartialResultsStability: 'medium',
+      EnableAutomaticPunctuation: true,
+    });
+
+    (async () => {
+      try {
+        const resp = await client.send(command, { abortSignal: controller.signal });
+        for await (const event of resp.TranscriptResultStream) {
+          if (closed) break;
+          if (event.TranscriptEvent) {
+            const items = normalizeTranscriptEvent(event, channel, key);
+            for (const it of items) {
+              log('transcript', `${key}`, it.isFinal ? 'final' : 'partial', it.text);
+              json(ws, it);
+              if (roomId) {
+                broadcastTranscript(roomId, it);
+              } else {
+                broadcastAll(it);
+              }
+            }
+          }
+        }
+      } catch (e) {
+        const msg = (e && (e.message || e.toString())) || 'transcribe stream error';
+        if (!closed) {
+          json(ws, { type: 'error', code: 'AWS_STREAM', message: msg, track: key, channel });
+        }
+        console.error('[aws-ws] stream error:', msg);
+      } finally {
+        try { audioQ.end(); } catch {}
+        sessions.delete(key);
+      }
+    })();
+
+    session = { audioQ, controller, channel, track: key };
+    sessions.set(key, session);
+    const ready = {
+      type: 'ready',
+      ts: Date.now(),
+      info: { mode: 'aws', languageCode: LANGUAGE, sampleRate: SAMPLE_RATE, track: key, channel },
+      track: key,
+      channel,
+    };
+    json(ws, ready);
+    if (roomId) {
+      broadcastTranscript(roomId, ready);
+    } else {
+      broadcastAll(ready);
+    }
+    return session;
   }
 
   ws.on('message', async (data) => {
@@ -205,83 +307,24 @@ wss.on('connection', async (ws, request) => {
     const kind = msg?.event || msg?.type;
     switch (kind) {
       case 'start': {
-        try {
-          client = createAwsClient();
-          audioQ = createAudioQueue();
-          controller = new AbortController();
-          const command = new StartStreamTranscriptionCommand({
-            LanguageCode: LANGUAGE,
-            MediaEncoding: 'pcm',
-            MediaSampleRateHertz: SAMPLE_RATE,
-            AudioStream: audioQ.iter(),
-            EnablePartialResultsStabilization: true,
-            PartialResultsStability: 'medium',
-            EnableAutomaticPunctuation: true,
-            // ShowSpeakerLabel: false,
-            // EnableChannelIdentification: false,
-          });
-
-          const resp = await client.send(command, { abortSignal: controller.signal });
-
-          // consume transcript stream asynchronously
-          (async () => {
-            try {
-              for await (const event of resp.TranscriptResultStream) {
-                if (closed) break;
-                if (event.TranscriptEvent) {
-                  const items = normalizeTranscriptEvent(event);
-                  for (const it of items) {
-                    log('transcript', it.isFinal ? 'final' : 'partial', it.text);
-                    // Send back to producer connection
-                    json(ws, it);
-                    // Broadcast to observers in room, or to all if no room provided
-                    if (roomId) {
-                      broadcastTranscript(roomId, it);
-                    } else {
-                      broadcastAll(it);
-                    }
-                  }
-                }
-              }
-            } catch (e) {
-              const msg = (e && (e.message || e.toString())) || 'transcribe stream error';
-              if (!closed) json(ws, { type: 'error', code: 'AWS_STREAM', message: msg });
-              console.error('[aws-ws] stream error:', msg);
-            } finally {
-              safeClose(1000, 'aws-finished');
-            }
-          })();
-
-          const ready = { type: 'ready', ts: Date.now(), info: { mode: 'aws', languageCode: LANGUAGE, sampleRate: SAMPLE_RATE } };
-          json(ws, ready);
-          if (roomId) {
-            broadcastTranscript(roomId, ready);
-          } else {
-            broadcastAll(ready);
-          }
-        } catch (e) {
-          const msg = (e && (e.message || e.toString())) || 'failed to start transcribe';
-          console.error('[aws-ws] start error:', msg);
-          json(ws, { type: 'error', code: 'AWS_START', message: msg });
-          safeClose(1011, 'failed-start');
-        }
+        json(ws, {
+          type: 'ready',
+          ts: Date.now(),
+          info: { mode: 'aws', languageCode: LANGUAGE, sampleRate: SAMPLE_RATE, tracks: STREAM_ACCEPT_TRACKS },
+        });
         break;
       }
       case 'media': {
-        if (!audioQ) return;
         const b64 = msg?.media?.payload || msg?.payload;
-        const track = (msg?.media?.track || msg?.track || '').toString();
-        const accept = (process.env.STREAM_ACCEPT_TRACKS || 'inbound').toLowerCase();
-        // Filter tracks (default inbound only) to avoid mixing caller+callee audio into one ASR stream
-        if (accept === 'inbound' && track && track !== 'inbound') return;
-        if (accept === 'outbound' && track && track !== 'outbound') return;
-        // 'both' accepts any
+        const track = normaliseTrack(msg?.media?.track || msg?.track || '');
+        if (!isTrackAccepted(track)) return;
         if (!b64) return;
         try {
           const pcm = base64MuLawToPCM16(b64);
           // Transcribe expects little-endian PCM16; Int16Array -> Buffer
           const buf = Buffer.from(pcm.buffer, pcm.byteOffset, pcm.byteLength);
-          audioQ.push(buf);
+          const session = ensureAwsSession(track);
+          session.audioQ.push(buf);
         } catch (e) {
           // ignore decode errors
         }

@@ -9,6 +9,35 @@ function json(ws, obj) {
 
 function now() { return Date.now(); }
 
+const ACCEPT_TRACKS = (process.env.STREAM_ACCEPT_TRACKS || 'both').toLowerCase();
+const INBOUND_LABEL = process.env.STREAM_INBOUND_LABEL || 'caller';
+const OUTBOUND_LABEL = process.env.STREAM_OUTBOUND_LABEL || 'agent';
+
+function normaliseTrack(raw) {
+  const value = (raw || '').toString().toLowerCase();
+  if (value === 'outbound') return 'outbound';
+  if (value === 'inbound') return 'inbound';
+  return value || 'inbound';
+}
+
+function isTrackAccepted(track) {
+  switch (ACCEPT_TRACKS) {
+    case 'inbound':
+      return track !== 'outbound';
+    case 'outbound':
+      return track === 'outbound';
+    case 'both':
+    default:
+      return true;
+  }
+}
+
+function channelLabelFor(track) {
+  if (track === 'outbound') return OUTBOUND_LABEL;
+  if (track === 'inbound') return INBOUND_LABEL;
+  return track || 'mixed';
+}
+
 // Basic dev auth gate (bypassable via env)
 function isAuthBypassed() {
   return (process.env.MOCK_STREAM_ALLOW_NO_AUTH === 'true');
@@ -35,27 +64,51 @@ export async function GET(request) {
 
   ws.accept();
 
-  let transcriber = null;
+  const transcribers = new Map(); // track -> { transcriber, channel }
   let open = true;
   const openedAt = now();
 
   function safeClose(code = 1000, reason = 'normal') {
     if (!open) return;
     open = false;
-    try { transcriber?.stop?.(); } catch (_) {}
+    for (const entry of transcribers.values()) {
+      try { entry.transcriber?.stop?.(); } catch (_) {}
+    }
+    transcribers.clear();
     try { ws.close(code, reason); } catch (_) {}
   }
 
-  function attachTranscriberEvents(t) {
-    t.on('partial', (evt) => {
-      json(ws, { type: 'transcript', ...evt });
+  function attachTranscriberEvents(entry) {
+    const { transcriber, channel, track } = entry;
+    transcriber.on('partial', (evt) => {
+      json(ws, { type: 'transcript', ...evt, channel, track });
     });
-    t.on('final', (evt) => {
-      json(ws, { type: 'transcript', ...evt });
+    transcriber.on('final', (evt) => {
+      json(ws, { type: 'transcript', ...evt, channel, track });
     });
-    t.on('error', (evt) => {
-      json(ws, { type: 'error', code: evt?.code || 'TRANSCRIBE', message: 'transcriber error' });
+    transcriber.on('error', (evt) => {
+      json(ws, {
+        type: 'error',
+        channel,
+        track,
+        code: evt?.code || 'TRANSCRIBE',
+        message: 'transcriber error',
+      });
     });
+  }
+
+  function ensureTranscriber(track) {
+    const key = track || 'inbound';
+    let entry = transcribers.get(key);
+    if (entry) return entry.transcriber;
+    const channel = channelLabelFor(key);
+    const transcriber = createTranscriber({ channel, track: key });
+    entry = { transcriber, channel, track: key };
+    transcribers.set(key, entry);
+    attachTranscriberEvents(entry);
+    transcriber.start();
+    json(ws, { type: 'ready', ts: now(), channel, track: key, info: transcriber.getInfo() });
+    return transcriber;
   }
 
   ws.addEventListener('message', (event) => {
@@ -70,19 +123,29 @@ export async function GET(request) {
 
     switch (kind) {
       case 'start': {
-        // Initialize transcriber (mock by default)
-        transcriber = createTranscriber({});
-        attachTranscriberEvents(transcriber);
-        transcriber.start();
-        json(ws, { type: 'ready', ts: now(), info: transcriber.getInfo() });
+        json(ws, {
+          type: 'ready',
+          ts: now(),
+          info: {
+            mode: process.env.MOCK_TRANSCRIBE === 'false' ? 'aws' : 'mock',
+            tracks: ACCEPT_TRACKS,
+          },
+        });
         break;
       }
       case 'media': {
         const b64 = payload?.media?.payload || payload?.payload;
-        if (b64 && transcriber) {
+        const track = normaliseTrack(payload?.media?.track || payload?.track || '');
+        if (!isTrackAccepted(track)) {
+          break;
+        }
+        if (b64) {
           try {
             const pcm = base64MuLawToPCM16(b64);
-            transcriber.write(pcm);
+            const t = ensureTranscriber(track);
+            if (typeof t.write === 'function') {
+              t.write(pcm);
+            }
           } catch (_) {
             // ignore decode errors in dev
           }
@@ -101,13 +164,20 @@ export async function GET(request) {
   });
 
   ws.addEventListener('close', () => {
-    try { transcriber?.stop?.(); } catch (_) {}
+    for (const entry of transcribers.values()) {
+      try { entry.transcriber?.stop?.(); } catch (_) {}
+    }
+    transcribers.clear();
     open = false;
   });
 
   // Initial hello for client diagnostics
-  json(ws, { type: 'hello', ts: openedAt, mode: process.env.MOCK_TRANSCRIBE === 'false' ? 'aws' : 'mock' });
+  json(ws, {
+    type: 'hello',
+    ts: openedAt,
+    mode: process.env.MOCK_TRANSCRIBE === 'false' ? 'aws' : 'mock',
+    tracks: ACCEPT_TRACKS,
+  });
 
   return new Response(null, { status: 101, webSocket: client });
 }
-
