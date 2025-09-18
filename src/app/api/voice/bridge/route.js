@@ -1,6 +1,7 @@
 export const runtime = 'nodejs';
 
 import { buildBridgeTwiml, computeBaseUrl, parseFormBody, validateTwilioSignature } from '@/lib/twilio';
+import { createStreamToken } from '@/lib/streamAuth';
 
 async function handle(request) {
   // Build full URL for signature validation
@@ -29,16 +30,37 @@ async function handle(request) {
   // Build WSS URL for media stream
   const configuredBase = (process.env.STREAM_BASE_URL || '').replace(/\/$/, '');
   const wsBase = configuredBase || base.replace(/^http/i, 'ws');
-  const streamUrl = `${wsBase}/api/stream?room=${encodeURIComponent(identity)}&token=dev`;
+  const streamBaseUrl = `${wsBase}/api/stream`;
+  let streamToken;
+  try {
+    streamToken = await createStreamToken({ room: identity, ttlSeconds: 180 });
+  } catch (err) {
+    if (process.env.MOCK_STREAM_ALLOW_NO_AUTH === 'true') {
+      console.warn('[voice/bridge] falling back to dev stream token (auth bypass)', err?.message || err);
+      streamToken = { token: 'dev', expiresAt: 0 };
+    } else {
+      throw err;
+    }
+  }
+  console.log('[voice/bridge] streamParams', {
+    identity,
+    to,
+    streamUrl: streamBaseUrl,
+    tokenExpiresAt: streamToken.expiresAt,
+  });
 
   const consentMessage = process.env.CONSENT_MESSAGE || '';
 
   const twiml = buildBridgeTwiml({
-    wsUrl: streamUrl,
+    wsUrl: streamBaseUrl,
     to,
     consentMessage,
     language: 'en-AU',
     track: process.env.STREAM_TRACK,
+    streamParams: {
+      room: identity,
+      token: streamToken.token,
+    },
   });
 
   return new Response(twiml, {

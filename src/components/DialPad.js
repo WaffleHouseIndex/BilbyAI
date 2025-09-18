@@ -8,8 +8,6 @@ import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { Phone, PhoneOff, Volume2, MicOff, Mic, User, Loader2 } from "lucide-react";
 
-const STREAM_TOKEN = "dev";
-
 function statusVariant(status) {
   switch (status) {
     case "ready":
@@ -194,7 +192,6 @@ export default function DialPad({ userId = "demo" }) {
           to: target,
           userId,
           room: identityRef.current,
-          token: STREAM_TOKEN,
         }),
       });
       const body = await res.json().catch(() => ({}));

@@ -1,36 +1,47 @@
-This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://github.com/vercel/next.js/tree/canary/packages/create-next-app).
+# BilbyAI Transcription MVP
+
+BilbyAI is a browser-based copilot for aged-care agents in Australia. It delivers in-browser calling through Twilio and real-time speech to text via AWS Transcribe while keeping audio and transcripts ephemeral to satisfy the Australian Privacy Principles.
+
+## Current Highlights
+- Outbound and inbound calling through the Twilio Voice SDK using the sydney edge.
+- Live transcription streamed from Twilio Media Streams into the UI (mock mode and AWS bridge supported).
+- Minimal dashboard composed of DialPad and TranscriptPanel components.
+- Shared-secret stream authentication for all websocket connections.
+
+## Architecture Overview
+- Next.js (app directory, React 19) hosts the marketing surface, agent console, and API routes.
+- Twilio access tokens are issued from /api/token; webhook /api/twilio handles inbound calls and starts media streams.
+- /api/stream (Edge runtime) receives Twilio Media Stream frames, converts mu-law to PCM16, and forwards audio to the transcription adapter in src/lib/transcribe.
+- A dedicated Node websocket bridge (scripts/aws-ws-server.mjs) connects to AWS Transcribe for production use.
+- Shared utilities live under src/lib (Twilio helpers, audio transforms, stream auth).
 
 ## Getting Started
+1. Install dependencies with npm install.
+2. Create .env.local and populate required secrets:
+   - TWILIO_ACCOUNT_SID, TWILIO_API_KEY, TWILIO_API_SECRET, TWILIO_AUTH_TOKEN, TWILIO_REGION
+   - TWILIO_PHONE_NUMBER (outbound caller ID)
+   - AWS_ACCESS_KEY_ID, AWS_SECRET_ACCESS_KEY, AWS_REGION (ap-southeast-2 recommended)
+   - STREAM_SHARED_SECRET (minimum 16 characters, used for HMAC stream tokens)
+   - Optional: CONSENT_MESSAGE, PUBLIC_URL, STREAM_BASE_URL, MOCK_STREAM_ALLOW_NO_AUTH
+3. Start the Next.js dev server with npm run dev. Run npm run dev:aws in another terminal if you want to test the AWS transcription bridge locally.
 
-First, run the development server:
+## Stream Auth Tokens
+- Every websocket connection to /api/stream requires a signed token tied to the call room or identity.
+- src/lib/streamAuth.js issues and verifies HMAC tokens. In development you can set MOCK_STREAM_ALLOW_NO_AUTH=true to bypass authentication (tokens fall back to dev).
+- Call media streams deliver the token via Twilio `<Stream><Parameter name="token" .../></Stream>` attributes; the server validates it on the `start` frame before accepting audio.
+- Observer clients (TranscriptPanel) fetch short-lived tokens from /api/stream/token and include them as query parameters.
 
-```bash
-npm run dev
-# or
-yarn dev
-# or
-pnpm dev
-# or
-bun dev
-```
+## Developer Workflow
+- Frontend components live in src/components; build toward the copilot look described in docs/ALPHA_FOUNDATIONS.md.
+- API endpoints reside under src/app/api.
+- Use npm run dev:ws for a pure mock transcription flow without AWS.
+- Linting is available via npm run lint.
 
-Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
+## Compliance Notes
+- Keep all workloads in Australian regions (Twilio edge sydney and AWS ap-southeast-2).
+- Avoid persisting transcripts or audio; only transient processing is permitted.
+- Surface consent messaging by setting CONSENT_MESSAGE.
 
-You can start editing the page by modifying `app/page.js`. The page auto-updates as you edit the file.
-
-This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
-
-## Learn More
-
-To learn more about Next.js, take a look at the following resources:
-
-- [Next.js Documentation](https://nextjs.org/docs) - learn about Next.js features and API.
-- [Learn Next.js](https://nextjs.org/learn) - an interactive Next.js tutorial.
-
-You can check out [the Next.js GitHub repository](https://github.com/vercel/next.js) - your feedback and contributions are welcome!
-
-## Deploy on Vercel
-
-The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
-
-Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.
+## Planning Resources
+- DEVELOPMENT_PLAN.md tracks milestones and task status.
+- docs/ALPHA_FOUNDATIONS.md captures the product flow, payment/auth decisions, and infrastructure prerequisites for the alpha launch.

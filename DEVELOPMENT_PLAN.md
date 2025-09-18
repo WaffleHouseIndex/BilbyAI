@@ -64,9 +64,9 @@ M4 — Live transcription UI
 
 M5 — Security & compliance
 - Tasks:
-  - [ ] Short-lived tokens (frontend <-> `/api/token`), identity `agent_{USER_ID}`.
-  - [ ] Signature verification for `/api/twilio`.
-  - [ ] AuthN on `/api/stream` (signed param/JWT per call/session).
+  - [x] Short-lived tokens (frontend <-> `/api/token`), identity `agent_{USER_ID}`.
+  - [x] Signature verification for `/api/twilio`.
+  - [x] AuthN on `/api/stream` (signed param/JWT per call/session).
   - [ ] Optional consent message via TwiML `<Say>` preamble.
   - [ ] Redacted logs and no transcript/audio persistence.
 - Acceptance:
@@ -137,7 +137,7 @@ High-level summary
 - M2 Transcription pipeline: [x]
 - M3 Outbound calling UI: [~]
 - M4 Live transcription UI: [x]
-- M5 Security & compliance: [ ]
+- M5 Security & compliance: [~]
 - M6 E2E & hardening: [ ]
 - M7 Deployment & config: [ ]
 
@@ -150,7 +150,7 @@ High-level summary
 - [ ] Build `DialPad.js`
 - [x] Build `DialPad.js`
 - [x] Build `TranscriptPanel.js`
-- [ ] Add WS auth (HMAC)
+- [x] Add WS auth (HMAC)
 - [x] Manual E2E pass (inbound)
 - [x] Dual-track transcription (agent + caller)
 - [ ] Deployment runbook
@@ -199,6 +199,7 @@ Security/compliance
 - 2025-09-14: Initial plan and progress tracker added.
 - 2025-09-14: Implemented M1 APIs — `/api/token` (Access Token) and `/api/twilio` (TwiML webhook with signature validation). Added Twilio SDK dependency.
 - 2025-09-14: Added (then removed) temporary debug flags for Twilio signature validation after resolving AU1 vs US1 Auth Token mismatch. Code reverted to clean validation.
+- 2025-09-15: Introduced shared-secret stream tokens, tightened access-token TTLs, and refreshed README/alpha foundations documentation.
 
 ---
 

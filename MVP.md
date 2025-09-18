@@ -65,10 +65,10 @@ The MVP must:
 
 - **MVP (simple):**  
   - Twilio Media Streams = **mixed audio**.  
-  - Use **AWS Transcribe speaker diarization** to label agent vs elderly.  
+  - Use **AWS Transcribe speaker diarization** to label agent vs caller.  
 
 - **Advanced (future):**  
-  - **Dual-channel recording** → post-call transcripts (agent vs elderly channels).  
+  - **Dual-channel recording** → post-call transcripts (agent vs caller channels).  
   - **Separate Media Streams per leg** (inbound vs outbound) → real-time parallel transcription.  
   - Whisper + diarization model (PyAnnote) for advanced labeling.  
 

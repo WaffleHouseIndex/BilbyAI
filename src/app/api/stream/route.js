@@ -2,6 +2,7 @@ export const runtime = 'edge';
 
 import { base64MuLawToPCM16 } from '@/lib/audio';
 import { createTranscriber } from '@/lib/transcribe';
+import { verifyStreamToken } from '@/lib/streamAuth';
 
 function json(ws, obj) {
   try { ws.send(JSON.stringify(obj)); } catch (_) {}
@@ -43,20 +44,20 @@ function isAuthBypassed() {
   return (process.env.MOCK_STREAM_ALLOW_NO_AUTH === 'true');
 }
 
-function validateToken(_request) {
-  // TODO: implement HMAC validation using crypto.subtle when enabling auth
-  // For now, allow if bypass flag is true; otherwise require a token param but accept it.
+async function validateToken({ token, room }) {
   if (isAuthBypassed()) return true;
-  return true; // placeholder permissive in dev
+  if (!token || !room) return false;
+  try {
+    return await verifyStreamToken({ token, room });
+  } catch (err) {
+    console.error('[stream] token validation error', err);
+    return false;
+  }
 }
 
 export async function GET(request) {
   if (request.headers.get('upgrade') !== 'websocket') {
     return new Response('Expected WebSocket', { status: 400 });
-  }
-
-  if (!validateToken(request)) {
-    return new Response('Unauthorized', { status: 401 });
   }
 
   const { 0: client, 1: server } = new WebSocketPair();
@@ -67,6 +68,16 @@ export async function GET(request) {
   const transcribers = new Map(); // track -> { transcriber, channel }
   let open = true;
   const openedAt = now();
+  const url = new URL(request.url);
+  let roomId = url.searchParams.get('room') || url.searchParams.get('identity') || '';
+  const initialToken = url.searchParams.get('token') || '';
+  let authorized = false;
+
+  if (await validateToken({ token: initialToken, room: roomId })) {
+    authorized = true;
+  } else if (isAuthBypassed()) {
+    authorized = true;
+  }
 
   function safeClose(code = 1000, reason = 'normal') {
     if (!open) return;
@@ -98,6 +109,7 @@ export async function GET(request) {
   }
 
   function ensureTranscriber(track) {
+    if (!authorized && !isAuthBypassed()) return null;
     const key = track || 'inbound';
     let entry = transcribers.get(key);
     if (entry) return entry.transcriber;
@@ -111,7 +123,25 @@ export async function GET(request) {
     return transcriber;
   }
 
-  ws.addEventListener('message', (event) => {
+  async function ensureAuthorizedFromStart(startPayload) {
+    if (authorized || isAuthBypassed()) {
+      return true;
+    }
+    const custom = startPayload?.customParameters || {};
+    const token = custom.token || custom.Token || initialToken;
+    const roomFromStart = custom.room || custom.Room || roomId;
+    if (!token || !roomFromStart) {
+      return false;
+    }
+    if (await validateToken({ token, room: roomFromStart })) {
+      authorized = true;
+      roomId = roomFromStart;
+      return true;
+    }
+    return false;
+  }
+
+  ws.addEventListener('message', async (event) => {
     let payload;
     try { payload = JSON.parse(event.data); } catch (_) {
       json(ws, { type: 'error', code: 'BAD_JSON', message: 'Invalid JSON frame' });
@@ -123,6 +153,12 @@ export async function GET(request) {
 
     switch (kind) {
       case 'start': {
+        const ok = await ensureAuthorizedFromStart(payload?.start);
+        if (!ok && !isAuthBypassed()) {
+          json(ws, { type: 'error', code: 'UNAUTHORIZED', message: 'Invalid stream token' });
+          safeClose(1008, 'unauthorized');
+          return;
+        }
         json(ws, {
           type: 'ready',
           ts: now(),
@@ -134,6 +170,9 @@ export async function GET(request) {
         break;
       }
       case 'media': {
+        if (!authorized && !isAuthBypassed()) {
+          break;
+        }
         const b64 = payload?.media?.payload || payload?.payload;
         const track = normaliseTrack(payload?.media?.track || payload?.track || '');
         if (!isTrackAccepted(track)) {
@@ -143,7 +182,7 @@ export async function GET(request) {
           try {
             const pcm = base64MuLawToPCM16(b64);
             const t = ensureTranscriber(track);
-            if (typeof t.write === 'function') {
+            if (t && typeof t.write === 'function') {
               t.write(pcm);
             }
           } catch (_) {

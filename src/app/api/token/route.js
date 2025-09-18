@@ -7,11 +7,15 @@ export async function GET(request) {
     const { searchParams } = new URL(request.url);
     const userId = searchParams.get('userId') || 'demo';
     const identity = `agent_${userId}`;
-    const ttl = parseInt(process.env.TOKEN_TTL_SECONDS || '900', 10);
-    const token = makeAccessToken({ identity, ttlSeconds: ttl });
+    const rawTtl = parseInt(process.env.TOKEN_TTL_SECONDS || '300', 10);
+    const ttl = Number.isFinite(rawTtl)
+      ? Math.min(900, Math.max(120, rawTtl))
+      : 300;
+    const tokenResult = makeAccessToken({ identity, ttlSeconds: ttl });
+    const expiresAt = Date.now() + ttl * 1000;
 
     return new Response(
-      JSON.stringify({ token, identity, ttl}),
+      JSON.stringify({ token: tokenResult, identity, ttl, expiresAt }),
       { status: 200, headers: { 'content-type': 'application/json' } }
     );
   } catch (err) {

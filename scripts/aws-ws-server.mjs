@@ -9,12 +9,18 @@
 //  5) Send Twilio-like frames: start -> media (base64 mu-law) -> stop
 
 import http from 'http';
-import url from 'url';
+import url, { fileURLToPath, pathToFileURL } from 'url';
+import path from 'path';
 import { WebSocketServer } from 'ws';
 import dotenv from 'dotenv';
 import { TranscribeStreamingClient, StartStreamTranscriptionCommand } from '@aws-sdk/client-transcribe-streaming';
 
 dotenv.config({ path: '.env.local' });
+
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = path.dirname(__filename);
+const streamAuthModule = await import(pathToFileURL(path.resolve(__dirname, '../src/lib/streamAuth.js')).href);
+const { verifyStreamToken } = streamAuthModule;
 
 const PORT = process.env.AWS_WS_PORT ? parseInt(process.env.AWS_WS_PORT, 10) : 3002;
 const PATH = '/api/stream';
@@ -33,6 +39,19 @@ function assertEnv(name) {
 
 function log(...args) {
   if (process.env.DEBUG_AWS_WS === '1') console.log('[aws-ws]', ...args);
+}
+
+const AUTH_BYPASSED = process.env.MOCK_STREAM_ALLOW_NO_AUTH === 'true';
+
+async function validateToken({ token, room }) {
+  if (AUTH_BYPASSED) return true;
+  if (!token || !room) return false;
+  try {
+    return await verifyStreamToken({ token, room });
+  } catch (err) {
+    console.error('[aws-ws] token validation error', err);
+    return false;
+  }
 }
 
 // Local copies to avoid ESM/CJS import mismatch warnings
@@ -207,11 +226,27 @@ function broadcastAll(obj) {
 wss.on('connection', async (ws, request) => {
   const { query } = url.parse(request.url, true);
   const isObserver = query?.observer === '1' || query?.role === 'observer';
-  const roomId = (query?.room || '').toString() || null;
-  json(ws, { type: 'hello', ts: Date.now(), mode: 'aws', role: isObserver ? 'observer' : 'producer', room: roomId, tracks: STREAM_ACCEPT_TRACKS });
-  if (isObserver && roomId) {
+  let roomId = (query?.room || '').toString() || null;
+  const initialToken = (query?.token || '').toString() || null;
+  let authorized = await validateToken({ token: initialToken, room: roomId });
+
+  if (isObserver) {
+    if (!roomId) {
+      json(ws, { type: 'error', code: 'BAD_REQUEST', message: 'room parameter required for observers' });
+      ws.close(1008, 'missing room');
+      return;
+    }
+    if (!authorized && !AUTH_BYPASSED) {
+      json(ws, { type: 'error', code: 'UNAUTHORIZED', message: 'invalid observer token' });
+      ws.close(1008, 'unauthorized');
+      return;
+    }
     addObserver(roomId, ws);
+  } else if (authorized && !roomId && query?.room) {
+    roomId = (query.room || '').toString() || null;
   }
+
+  json(ws, { type: 'hello', ts: Date.now(), mode: 'aws', role: isObserver ? 'observer' : 'producer', room: roomId, tracks: STREAM_ACCEPT_TRACKS });
   let closed = false;
   let client = null;
   const sessions = new Map(); // track -> { audioQ, controller, channel, track }
@@ -228,6 +263,7 @@ wss.on('connection', async (ws, request) => {
   }
 
   function ensureAwsSession(track) {
+    if (!authorized && !AUTH_BYPASSED) return null;
     const key = track || 'inbound';
     let session = sessions.get(key);
     if (session) return session;
@@ -298,6 +334,20 @@ wss.on('connection', async (ws, request) => {
     return session;
   }
 
+  async function ensureAuthorizedFromStart(startPayload) {
+    if (authorized || AUTH_BYPASSED) return true;
+    const custom = startPayload?.customParameters || {};
+    const startToken = custom.token || custom.Token || initialToken;
+    const startRoom = custom.room || custom.Room || roomId;
+    if (!startToken || !startRoom) return false;
+    if (await validateToken({ token: startToken, room: startRoom })) {
+      authorized = true;
+      roomId = startRoom;
+      return true;
+    }
+    return false;
+  }
+
   ws.on('message', async (data) => {
     let msg = null;
     try { msg = JSON.parse(data.toString()); } catch {
@@ -307,6 +357,11 @@ wss.on('connection', async (ws, request) => {
     const kind = msg?.event || msg?.type;
     switch (kind) {
       case 'start': {
+        if (!(await ensureAuthorizedFromStart(msg?.start)) && !AUTH_BYPASSED) {
+          json(ws, { type: 'error', code: 'UNAUTHORIZED', message: 'Invalid stream token' });
+          safeClose(1008, 'unauthorized');
+          return;
+        }
         json(ws, {
           type: 'ready',
           ts: Date.now(),
@@ -315,6 +370,7 @@ wss.on('connection', async (ws, request) => {
         break;
       }
       case 'media': {
+        if (!authorized && !AUTH_BYPASSED) return;
         const b64 = msg?.media?.payload || msg?.payload;
         const track = normaliseTrack(msg?.media?.track || msg?.track || '');
         if (!isTrackAccepted(track)) return;
@@ -324,6 +380,7 @@ wss.on('connection', async (ws, request) => {
           // Transcribe expects little-endian PCM16; Int16Array -> Buffer
           const buf = Buffer.from(pcm.buffer, pcm.byteOffset, pcm.byteLength);
           const session = ensureAwsSession(track);
+          if (!session) return;
           session.audioQ.push(buf);
         } catch (e) {
           // ignore decode errors
@@ -352,9 +409,9 @@ server.on('upgrade', (req, socket, head) => {
     socket.destroy();
     return;
   }
-  // Minimal dev auth: accept any token or bypass if configured
+  const isObserver = query?.observer === '1' || query?.role === 'observer';
   const token = query?.token;
-  if (!token && process.env.MOCK_STREAM_ALLOW_NO_AUTH !== 'true') {
+  if (isObserver && !token && process.env.MOCK_STREAM_ALLOW_NO_AUTH !== 'true') {
     socket.destroy();
     return;
   }

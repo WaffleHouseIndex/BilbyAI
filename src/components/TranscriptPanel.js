@@ -51,22 +51,61 @@ function channelTextClass(channel) {
   return "text-gray-800";
 }
 
-export default function TranscriptPanel({ room = "agent_demo", token = "dev" }) {
+export default function TranscriptPanel({ room = "agent_demo", token = null }) {
   const [messages, setMessages] = useState([]);
-  const [status, setStatus] = useState("disconnected");
+  const [status, setStatus] = useState(token ? "connecting" : "authorizing");
   const [url, setUrl] = useState(defaultObserverUrl());
+  const [authToken, setAuthToken] = useState(token);
+  const [tokenError, setTokenError] = useState("");
+  const [loadingToken, setLoadingToken] = useState(!token);
   const wsRef = useRef(null);
   const segmentsRef = useRef(new Map());
 
   const connectUrl = useMemo(() => {
+    if (!authToken) return null;
     const u = new URL(url);
     u.searchParams.set("observer", "1");
     u.searchParams.set("room", room);
-    if (token) u.searchParams.set("token", token);
+    u.searchParams.set("token", authToken);
     return u.toString();
-  }, [url, room, token]);
+  }, [url, room, authToken]);
 
   useEffect(() => {
+    if (token || authToken) return undefined;
+    let cancelled = false;
+    async function fetchToken() {
+      setLoadingToken(true);
+      setTokenError("");
+      setStatus("authorizing");
+      try {
+        const res = await fetch(`/api/stream/token?room=${encodeURIComponent(room)}`, { cache: "no-store" });
+        if (!res.ok) {
+          throw new Error(`token request failed (${res.status})`);
+        }
+        const data = await res.json();
+        if (!cancelled) {
+          setAuthToken(data?.token || null);
+          setStatus("connecting");
+        }
+      } catch (err) {
+        if (!cancelled) {
+          setTokenError(err?.message || "Failed to fetch stream token");
+          setStatus("error");
+        }
+      } finally {
+        if (!cancelled) {
+          setLoadingToken(false);
+        }
+      }
+    }
+    fetchToken();
+    return () => {
+      cancelled = true;
+    };
+  }, [room, token, authToken]);
+
+  useEffect(() => {
+    if (!connectUrl) return undefined;
     let ws;
     try {
       ws = new WebSocket(connectUrl);
@@ -133,12 +172,12 @@ export default function TranscriptPanel({ room = "agent_demo", token = "dev" }) 
     };
   }, [connectUrl]);
 
-  const statusVariant =
-    status === "connected"
-      ? "success"
-      : status === "connecting"
-      ? "warning"
-      : "secondary";
+  const statusVariant = (() => {
+    if (status === "connected") return "success";
+    if (status === "connecting" || status === "authorizing") return "warning";
+    if (status === "error") return "destructive";
+    return "secondary";
+  })();
 
   return (
     <Card className="w-full max-w-3xl">
@@ -163,11 +202,14 @@ export default function TranscriptPanel({ room = "agent_demo", token = "dev" }) 
           />
           <Input className="w-48" value={room} readOnly />
         </div>
+        {tokenError ? (
+          <div className="text-xs text-red-600 mb-3">{tokenError}</div>
+        ) : null}
         <ScrollArea className="h-64 border rounded p-3 bg-white">
           {messages.length === 0 ? (
             <div className="flex items-center gap-2 text-sm text-gray-700">
               <MessageSquareText className="h-4 w-4" />
-              Waiting for live transcripts…
+              {loadingToken ? 'Authorising stream…' : 'Waiting for live transcripts…'}
             </div>
           ) : (
             messages.map((m, idx) => {

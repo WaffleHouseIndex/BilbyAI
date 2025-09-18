@@ -2,6 +2,7 @@
 
 import twilio from 'twilio';
 import { buildBridgeTwiml, computeBaseUrl } from '@/lib/twilio';
+import { createStreamToken } from '@/lib/streamAuth';
 
 function normalizeDestination(raw) {
   if (!raw) {
@@ -53,8 +54,6 @@ export async function POST(request) {
   const identity = `agent_${userId}`;
   const toRaw = payload?.to || '';
   const room = payload?.room || identity;
-  const streamToken = payload?.token || 'dev';
-
   const normalised = normalizeDestination(toRaw);
   if (!normalised.ok) {
     console.warn('[outbound] invalid destination', { userId, toRaw, reason: normalised.reason });
@@ -76,16 +75,35 @@ export async function POST(request) {
 
   const base = computeBaseUrl(request);
   const wsBase = resolveWsBase(base);
-  const streamUrl = `${wsBase}/api/stream?room=${encodeURIComponent(room)}&token=${encodeURIComponent(streamToken)}`;
+  const streamBaseUrl = `${wsBase}/api/stream`;
+  let streamToken;
+  try {
+    streamToken = await createStreamToken({ room, ttlSeconds: 180 });
+  } catch (err) {
+    if (process.env.MOCK_STREAM_ALLOW_NO_AUTH === 'true') {
+      console.warn('[outbound] falling back to dev stream token (auth bypass)', err?.message || err);
+      streamToken = { token: 'dev', expiresAt: 0 };
+    } else {
+      throw err;
+    }
+  }
+  const streamParams = { room, token: streamToken.token };
+  console.log('[outbound] streamParams', {
+    room,
+    identity,
+    streamUrl: streamBaseUrl,
+    tokenExpiresAt: streamToken.expiresAt,
+  });
   const consentMessage = process.env.CONSENT_MESSAGE || '';
   const track = process.env.STREAM_OUTBOUND_TRACK || process.env.STREAM_TRACK || 'both_tracks';
 
   const twiml = buildBridgeTwiml({
-    wsUrl: streamUrl,
+    wsUrl: streamBaseUrl,
     to: `client:${identity}`,
     consentMessage,
     language: 'en-AU',
     track,
+    streamParams,
   });
 
   const client = twilio(apiKey, apiSecret, { accountSid: accountSid, edge: 'sydney', region: region });

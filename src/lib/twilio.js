@@ -65,7 +65,7 @@ export function makeAccessToken({ identity, ttlSeconds = 900 }) {
   return token.toJwt();
 }
 
-export function buildInboundTwiml({ wsUrl, clientIdentity, consentMessage, language = 'en-AU', dialClient = true, pauseSeconds = 60, track }) {
+export function buildInboundTwiml({ wsUrl, clientIdentity, consentMessage, language = 'en-AU', dialClient = true, pauseSeconds = 60, track, streamParams = {} }) {
   const { twiml } = twilio;
   const response = new twiml.VoiceResponse();
 
@@ -75,7 +75,11 @@ export function buildInboundTwiml({ wsUrl, clientIdentity, consentMessage, langu
 
   const start = response.start();
   const chosenTrack = resolveStreamTrack(track);
-  start.stream({ url: wsUrl, track: chosenTrack });
+  const stream = start.stream({ url: wsUrl, track: chosenTrack });
+  for (const [name, value] of Object.entries(streamParams || {})) {
+    if (value == null) continue;
+    stream.parameter({ name, value: String(value) });
+  }
 
   if (dialClient) {
     const dial = response.dial();
@@ -87,7 +91,7 @@ export function buildInboundTwiml({ wsUrl, clientIdentity, consentMessage, langu
   return response.toString();
 }
 
-export function buildBridgeTwiml({ wsUrl, to, consentMessage, language = 'en-AU', track }) {
+export function buildBridgeTwiml({ wsUrl, to, consentMessage, language = 'en-AU', track, streamParams = {} }) {
   const { twiml } = twilio;
   const response = new twiml.VoiceResponse();
 
@@ -97,7 +101,11 @@ export function buildBridgeTwiml({ wsUrl, to, consentMessage, language = 'en-AU'
 
   const start = response.start();
   const chosenTrack = resolveStreamTrack(track);
-  start.stream({ url: wsUrl, track: chosenTrack });
+  const stream = start.stream({ url: wsUrl, track: chosenTrack });
+  for (const [name, value] of Object.entries(streamParams || {})) {
+    if (value == null) continue;
+    stream.parameter({ name, value: String(value) });
+  }
 
   const dial = response.dial();
   if (to && to.toString().startsWith('client:')) {

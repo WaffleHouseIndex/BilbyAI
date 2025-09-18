@@ -74,6 +74,9 @@ bilbyai-transcription-mvp/
 - Secure WebSockets & API routes with auth tokens.
 - Add optional consent message at call start.
 
+### 4. Twilio Region Discrepancy
+ - The JWT and API tokens require region ('au1') and edge 'sydney' to be present or else they will default to authenticate with the 'us1' gateway.
+
 ---
 
 ## ⚙️ Env Variables (`.env.local`)
@@ -105,8 +108,7 @@ AWS_SECRET_ACCESS_KEY=xxxx
 
 ## Tool use
 
-1. When coding Twilio features ensure to consult the Twilio mcp tool
-2. When coding other features consult Context7 mcp tool for API documentation
+1. When coding other features using APIs consult Context7 mcp tool for relevant documentation
 
 ---
 
