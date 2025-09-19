@@ -13,9 +13,17 @@ import url, { fileURLToPath, pathToFileURL } from 'url';
 import path from 'path';
 import { WebSocketServer } from 'ws';
 import dotenv from 'dotenv';
+import { webcrypto as nodeWebcrypto } from 'node:crypto';
 import { TranscribeStreamingClient, StartStreamTranscriptionCommand } from '@aws-sdk/client-transcribe-streaming';
 
 dotenv.config({ path: '.env.local' });
+
+if (!globalThis.crypto || !globalThis.crypto.subtle) {
+  globalThis.crypto = nodeWebcrypto;
+}
+
+globalThis.__streamAuthCrypto = globalThis.crypto;
+
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
@@ -423,3 +431,6 @@ server.on('upgrade', (req, socket, head) => {
 server.listen(PORT, () => {
   console.log(`[aws-ws] listening on ws://localhost:${PORT}${PATH} (region=${REGION}, lang=${LANGUAGE}, rate=${SAMPLE_RATE})`);
 });
+
+
+

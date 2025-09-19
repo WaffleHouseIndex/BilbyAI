@@ -16,31 +16,26 @@ function getSharedSecret() {
 }
 
 async function signPayload(payload, secret) {
-  const subtle = typeof globalThis !== 'undefined' ? globalThis.crypto?.subtle : undefined;
-  if (subtle && typeof subtle.importKey === 'function') {
-    if (!cachedSubtleKeyPromise || cachedSubtleSecret !== secret) {
-      cachedSubtleSecret = secret;
-      cachedSubtleKeyPromise = subtle.importKey(
-        'raw',
-        textEncoder.encode(secret),
-        { name: 'HMAC', hash: 'SHA-256' },
-        false,
-        ['sign']
-      );
-    }
-    const key = await cachedSubtleKeyPromise;
-    return new Uint8Array(await subtle.sign('HMAC', key, payload));
+  const cryptoSource =
+    typeof globalThis !== 'undefined'
+      ? globalThis.crypto || globalThis.__streamAuthCrypto || null
+      : null;
+  const subtle = cryptoSource?.subtle;
+  if (!subtle) {
+    throw new Error('Web Crypto subtle API is not available in this runtime (streamAuth)');
   }
-
-  try {
-    const { createHmac } = await import('node:crypto');
-    const hmac = createHmac('sha256', secret);
-    hmac.update(Buffer.from(payload.buffer, payload.byteOffset, payload.byteLength));
-    return new Uint8Array(hmac.digest());
-  } catch (err) {
-    console.error('[streamAuth] Node crypto HMAC fallback failed', err);
-    throw err;
+  if (!cachedSubtleKeyPromise || cachedSubtleSecret !== secret) {
+    cachedSubtleSecret = secret;
+    cachedSubtleKeyPromise = subtle.importKey(
+      'raw',
+      textEncoder.encode(secret),
+      { name: 'HMAC', hash: 'SHA-256' },
+      false,
+      ['sign']
+    );
   }
+  const key = await cachedSubtleKeyPromise;
+  return new Uint8Array(await subtle.sign('HMAC', key, payload));
 }
 
 function clampTtl(seconds) {
@@ -145,3 +140,6 @@ export async function verifyStreamToken(options) {
 export function getStreamTokenTtlBounds() {
   return { min: MIN_TTL_SECONDS, max: MAX_TTL_SECONDS };
 }
+
+
+
