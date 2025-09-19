@@ -112,6 +112,21 @@ AWS_SECRET_ACCESS_KEY=xxxx
 
 ---
 
+## CRITICAL: Use ripgrep, not grep
+
+NEVER use grep for project-wide searches (slow, ignores .gitignore). ALWAYS use rg.
+
+- `rg "pattern"` — search content
+- `rg --files | rg "name"` — find files
+- `rg -t python "def"` — language filters
+
+## Agent Instructions
+
+- Replace commands: grep→rg, find→rg, ls -R→rg --files, cat|grep→rg pattern file
+- Cap reads at 250 lines; prefer `rg -n -A 3 -B 3` for context
+
+---
+
 ## 🚀 First Tasks for Agent
 1. Implement `/api/token` to generate Twilio Access Tokens.
 2. Implement `/api/twilio` webhook to return TwiML with `<Start><Stream>`.
@@ -125,3 +140,5 @@ AWS_SECRET_ACCESS_KEY=xxxx
 - [Twilio Media Streams](https://www.twilio.com/docs/voice/twilio-media-streams)
 - [AWS Transcribe Streaming](https://docs.aws.amazon.com/transcribe/latest/dg/streaming.html)
 - [Australian Privacy Principles](https://www.oaic.gov.au/privacy/australian-privacy-principles)
+
+

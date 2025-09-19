@@ -2,13 +2,30 @@ export const runtime = 'nodejs';
 
 import { createStreamToken, getStreamTokenTtlBounds } from '@/lib/streamAuth';
 
+import { getServerSession } from 'next-auth';
+
+import { authOptions } from '@/lib/auth/config';
+
 export async function GET(request) {
+  const session = await getServerSession(authOptions);
+  if (!session?.user?.id) {
+    return new Response('Unauthorized', { status: 401 });
+  }
+
   const { searchParams } = new URL(request.url);
   const room = (searchParams.get('room') || '').trim();
   if (!room) {
     return new Response(
       JSON.stringify({ error: 'room query parameter is required' }),
       { status: 400, headers: { 'content-type': 'application/json' } }
+    );
+  }
+
+  const expectedRoom = `agent_${session.user.id}`;
+  if (room !== expectedRoom) {
+    return new Response(
+      JSON.stringify({ error: 'not authorized for requested room' }),
+      { status: 403, headers: { 'content-type': 'application/json' } }
     );
   }
 

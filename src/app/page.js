@@ -1,13 +1,11 @@
-import TranscriptPanel from '@/components/TranscriptPanel';
-import DialPad from '@/components/DialPad';
+import { getServerSession } from "next-auth";
 
-export default function Home() {
-  return (
-    <div className="min-h-screen p-8">
-      <div className="mx-auto max-w-6xl grid grid-cols-1 md:grid-cols-2 gap-6">
-        <DialPad userId="demo" />
-        <TranscriptPanel room="agent_demo" />
-      </div>
-    </div>
-  );
+import LandingPage from "@/components/LandingPage";
+import { authOptions } from "@/lib/auth/config";
+
+export const dynamic = "force-dynamic";
+
+export default async function Home() {
+  const session = await getServerSession(authOptions);
+  return <LandingPage user={session?.user || null} />;
 }

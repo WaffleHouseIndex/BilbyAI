@@ -1,4 +1,4 @@
-# Alpha Foundations – Product Flow & Decisions
+﻿# Alpha Foundations – Product Flow & Decisions
 
 ## User Journey (MVP → Alpha)
 1. Landing page introduces BilbyAI value, pricing, and compliance posture.
@@ -32,3 +32,17 @@
 - Next.js app hosted on platform supporting hybrid Node functions (for Twilio webhooks) plus static front-end.
 - Dedicated Node runtime (container or VM) for AWS transcription WebSocket bridge with TLS termination.
 - Secrets to manage: Stripe keys, Twilio credentials (Account SID, Auth Token, API Key and Secret, Region), AWS credentials, STREAM_SHARED_SECRET, Resend API key, NextAuth secret.
+
+## Current Alpha Implementation
+- Landing page + Stripe Checkout flow in place; successful payments trigger Twilio number provisioning via webhook.
+- Magic-link sign-in (NextAuth + Resend) with encrypted datastore linking Stripe customer → Twilio number.
+- Copilot console delivered (dialer/history/settings tabs, live transcript workspace with AI summary placeholder, guidance sidebar).
+- Console surfaces provisioning status and retry controls; call history tracked in-memory per session.
+
+## Next Steps to Production
+- Observability & logging: add structured audit logs, redact sensitive values, and ship dashboards/alerts for provisioning and media stream failures.
+- Notifications: email/slack alerts for provisioning/billing failures and Twilio webhook exceptions.
+- Resilience: handle Device/WebSocket reconnects, retry Twilio number search with exponential backoff, and expose manual override tools.
+- Compliance & documentation: finalize consent UX, write deployment runbook (env matrices, TLS/WAF guidance), and document privacy posture for APP review.
+- Hosting: choose production platform (e.g., Vercel + managed Node bridge), validate WSS reachability, and secure Stripe/Twilio webhook endpoints.
+

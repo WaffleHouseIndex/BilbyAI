@@ -1,8 +1,10 @@
 ﻿export const runtime = 'nodejs';
 
+import { getServerSession } from 'next-auth';
 import twilio from 'twilio';
 import { buildBridgeTwiml, computeBaseUrl } from '@/lib/twilio';
 import { createStreamToken } from '@/lib/streamAuth';
+import { authOptions } from '@/lib/auth/config';
 
 function normalizeDestination(raw) {
   if (!raw) {
@@ -42,6 +44,11 @@ function resolveCallbackBase(request) {
 }
 
 export async function POST(request) {
+  const session = await getServerSession(authOptions);
+  if (!session?.user?.id) {
+    return new Response('Unauthorized', { status: 401 });
+  }
+
   let payload;
   try {
     payload = await request.json();
@@ -50,10 +57,10 @@ export async function POST(request) {
     return new Response('Invalid JSON body', { status: 400 });
   }
 
-  const userId = payload?.userId || 'demo';
+  const userId = session.user.id;
   const identity = `agent_${userId}`;
   const toRaw = payload?.to || '';
-  const room = payload?.room || identity;
+  const room = identity;
   const normalised = normalizeDestination(toRaw);
   if (!normalised.ok) {
     console.warn('[outbound] invalid destination', { userId, toRaw, reason: normalised.reason });

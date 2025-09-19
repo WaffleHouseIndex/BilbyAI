@@ -1,11 +1,22 @@
 export const runtime = 'nodejs';
 
+import { getServerSession } from 'next-auth';
+
 import { makeAccessToken } from '@/lib/twilio';
+import { authOptions } from '@/lib/auth/config';
 
 export async function GET(request) {
   try {
+    const session = await getServerSession(authOptions);
+    if (!session?.user?.id) {
+      return new Response('Unauthorized', { status: 401 });
+    }
+
     const { searchParams } = new URL(request.url);
-    const userId = searchParams.get('userId') || 'demo';
+    const requestedUserId = searchParams.get('userId');
+    const userId = requestedUserId && requestedUserId === session.user.id
+      ? requestedUserId
+      : session.user.id;
     const identity = `agent_${userId}`;
     const rawTtl = parseInt(process.env.TOKEN_TTL_SECONDS || '300', 10);
     const ttl = Number.isFinite(rawTtl)

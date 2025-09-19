@@ -3,12 +3,33 @@ import twilio from 'twilio';
 // Ensure Node runtime for Next.js route consumers
 export const RUNTIME = 'nodejs';
 
+let cachedRestClient = null;
+
 function getEnv(name, required = true) {
   const v = process.env[name];
   if (required && (!v || v === '...')) {
     throw new Error(`Missing required env: ${name}`);
   }
   return v;
+}
+
+export function getTwilioRestClient() {
+  if (cachedRestClient) return cachedRestClient;
+  const accountSid = getEnv('TWILIO_ACCOUNT_SID');
+  const authToken = process.env.TWILIO_AUTH_TOKEN;
+  const apiKey = process.env.TWILIO_API_KEY;
+  const apiSecret = process.env.TWILIO_API_SECRET;
+
+  if (apiKey && apiSecret) {
+    cachedRestClient = twilio(apiKey, apiSecret, {
+      accountSid,
+    });
+  } else if (authToken) {
+    cachedRestClient = twilio(accountSid, authToken);
+  } else {
+    throw new Error('Provide either TWILIO_API_KEY/TWILIO_API_SECRET or TWILIO_AUTH_TOKEN');
+  }
+  return cachedRestClient;
 }
 
 function resolveStreamTrack(pref) {
@@ -115,6 +136,68 @@ export function buildBridgeTwiml({ wsUrl, to, consentMessage, language = 'en-AU'
   }
 
   return response.toString();
+}
+
+export async function searchAvailableNumber(options = {}) {
+  const client = getTwilioRestClient();
+  const areaCode = options.areaCode || process.env.TWILIO_PHONE_AREA_CODE || undefined;
+  const locality = options.locality || process.env.TWILIO_PHONE_LOCALITY || undefined;
+  const contains = options.contains || process.env.TWILIO_PHONE_CONTAINS || undefined;
+
+  const params = {
+    voiceEnabled: true,
+    smsEnabled: false,
+    mmsEnabled: false,
+    beta: false,
+    limit: 5,
+  };
+
+  if (areaCode) params.areaCode = areaCode;
+  if (locality) params.locality = locality;
+  if (contains) params.contains = contains;
+
+  const numbers = await client.availablePhoneNumbers('AU').local.list(params);
+  return numbers;
+}
+
+export async function provisionIncomingNumber({ userId, friendlyName, baseUrl, areaCode, locality, contains }) {
+  let numbers = await searchAvailableNumber({ areaCode, locality, contains });
+  if (!numbers || numbers.length === 0) {
+    numbers = await searchAvailableNumber({});
+  }
+  if (!numbers || numbers.length === 0) {
+    throw new Error('No available AU numbers matched provisioning criteria');
+  }
+  const selection = numbers[0];
+  const client = getTwilioRestClient();
+  const accountSid = getEnv('TWILIO_ACCOUNT_SID');
+  const region = process.env.TWILIO_REGION || 'au1';
+  const friendly = friendlyName || `BilbyAI agent ${userId}`;
+
+  const voiceUrlBase = (baseUrl || process.env.PUBLIC_URL || process.env.NEXTAUTH_URL || 'http://localhost:3000').replace(/\/$/, '');
+  const voiceUrl = `${voiceUrlBase}/api/twilio?userId=${encodeURIComponent(userId)}`;
+  const statusCallback = `${voiceUrlBase}/api/debug/call-status`;
+
+  const number = await client.incomingPhoneNumbers.create({
+    accountSid,
+    phoneNumber: selection.phoneNumber,
+    friendlyName: friendly,
+    voiceUrl,
+    voiceMethod: 'POST',
+    voiceRegion: region,
+    statusCallback,
+    statusCallbackMethod: 'POST',
+    statusCallbackEvent: ['initiated', 'ringing', 'answered', 'completed'],
+    smsUrl: '',
+    smsMethod: 'POST',
+  });
+
+  return {
+    phoneNumber: number.phoneNumber,
+    sid: number.sid,
+    friendlyName: number.friendlyName,
+    region,
+  };
 }
 
 export async function parseFormBody(request) {

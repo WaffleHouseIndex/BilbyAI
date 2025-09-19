@@ -1,0 +1,11 @@
+Bilby AI Colour Scheme
+
+Primary - Blue (#1E88E5)
+Secondary - Teal/Green (#26A69A)
+Accent - Coral/Orange (#FF7043)
+
+Neutrals
+Background: Light Gray (#F5F5F5)
+Text: Charcoal (#212121)
+Borders/Dividers: Cool Gray (#BDBDBD)
+Secondary Background: White (#FFFFFF)
