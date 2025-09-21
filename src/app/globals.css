@@ -1,41 +1,386 @@
 @import "tailwindcss";
 
 :root {
-  --background: #f5f5f5;
-  --foreground: #212121;
-  --muted: #bdbdbd;
-  --surface: #ffffff;
-  --primary: #1e88e5;
-  --primary-foreground: #ffffff;
-  --secondary: #26a69a;
-  --secondary-foreground: #ffffff;
-  --accent: #ff7043;
-  --accent-foreground: #ffffff;
+  --font-size: 16px;
+  /* Bilby brand tokens */
+  --bilby-primary: #1E88E5; /* Blue */
+  --bilby-secondary: #26A69A; /* Teal/Green */
+  --bilby-accent: #FF7043; /* Coral/Orange */
+  --bilby-bg: #FFFFFF; /* White base */
+  --bilby-bg-muted: #F5F5F5; /* Light gray */
+  --bilby-text: #212121; /* Charcoal */
+  --bilby-border: #BDBDBD; /* Cool gray */
+
+  /* App surface tokens (light by default) */
+  --background: var(--bilby-bg);
+  --foreground: var(--bilby-text);
+  --card: #FFFFFF; /* white cards on white background with border */
+  --card-foreground: var(--bilby-text);
+  --popover: #FFFFFF;
+  --popover-foreground: var(--bilby-text);
+  --primary: var(--bilby-primary);
+  --primary-foreground: #FFFFFF;
+  --secondary: var(--bilby-secondary);
+  --secondary-foreground: #FFFFFF;
+  --muted: var(--bilby-bg-muted);
+  --muted-foreground: #424242;
+  --accent: var(--bilby-accent);
+  --accent-foreground: #FFFFFF;
+  --destructive: #EF4444;
+  --destructive-foreground: #FFFFFF;
+  --border: var(--bilby-border);
+  --input: #FFFFFF;
+  --input-background: #FFFFFF;
+  --switch-background: #E0E0E0;
+  --font-weight-medium: 500;
+  --font-weight-normal: 400;
+  --ring: rgba(30, 136, 229, 0.35);
+  --chart-1: rgba(30, 136, 229, 0.8);
+  --chart-2: rgba(38, 166, 154, 0.8);
+  --chart-3: rgba(255, 112, 67, 0.8);
+  --chart-4: rgba(33, 33, 33, 0.6);
+  --chart-5: rgba(189, 189, 189, 0.9);
+  --radius: 1rem;
+  --sidebar: #FFFFFF;
+  --sidebar-foreground: var(--bilby-text);
+  --sidebar-primary: var(--bilby-primary);
+  --sidebar-primary-foreground: #FFFFFF;
+  --sidebar-accent: var(--bilby-bg-muted);
+  --sidebar-accent-foreground: var(--bilby-text);
+  --sidebar-border: var(--bilby-border);
+  --sidebar-ring: rgba(30, 136, 229, 0.35);
+
+  /* Glass morphism variables tuned for light */
+  --glass-backdrop: blur(14px);
+  --glass-border: rgba(0, 0, 0, 0.06);
+  --glass-shadow: 0 6px 20px rgba(0, 0, 0, 0.06);
+  --glass-hover-shadow: 0 10px 24px rgba(0, 0, 0, 0.08);
 }
 
-@theme inline {
+.dark {
+  --background: #0b1020;
+  --foreground: rgba(255, 255, 255, 0.95);
+  --card: rgba(255, 255, 255, 0.06);
+  --card-foreground: rgba(255, 255, 255, 0.95);
+  --popover: rgba(30, 30, 30, 1);
+  --popover-foreground: rgba(255, 255, 255, 0.95);
+  --primary: var(--bilby-primary);
+  --primary-foreground: #FFFFFF;
+  --secondary: var(--bilby-secondary);
+  --secondary-foreground: #FFFFFF;
+  --muted: rgba(255, 255, 255, 0.04);
+  --muted-foreground: rgba(255, 255, 255, 0.7);
+  --accent: var(--bilby-accent);
+  --accent-foreground: #FFFFFF;
+  --destructive: #EF4444;
+  --destructive-foreground: #FFFFFF;
+  --border: rgba(255, 255, 255, 0.12);
+  --input: rgba(255, 255, 255, 0.06);
+  --ring: rgba(30, 136, 229, 0.35);
+  --font-weight-medium: 500;
+  --font-weight-normal: 400;
+  --chart-1: rgba(30, 136, 229, 0.8);
+  --chart-2: rgba(38, 166, 154, 0.8);
+  --chart-3: rgba(255, 112, 67, 0.8);
+  --chart-4: rgba(250, 204, 21, 0.8);
+  --chart-5: rgba(239, 68, 68, 0.8);
+  --sidebar: rgba(255, 255, 255, 0.06);
+  --sidebar-foreground: rgba(255, 255, 255, 0.95);
+  --sidebar-primary: var(--bilby-primary);
+  --sidebar-primary-foreground: #FFFFFF;
+  --sidebar-accent: rgba(255, 255, 255, 0.08);
+  --sidebar-accent-foreground: rgba(255, 255, 255, 0.95);
+  --sidebar-border: rgba(255, 255, 255, 0.12);
+  --sidebar-ring: rgba(30, 136, 229, 0.35);
+
+  /* Dark mode glass morphism */
+  --glass-backdrop: blur(20px);
+  --glass-border: rgba(255, 255, 255, 0.1);
+  --glass-shadow: 0 6px 20px rgba(0, 0, 0, 0.5);
+  --glass-hover-shadow: 0 10px 24px rgba(0, 0, 0, 0.6);
+}
+
+:root {
+  /* Tailwind token variables (for utility classes like text-foreground, border-border, etc.) */
   --color-background: var(--background);
   --color-foreground: var(--foreground);
+  --color-card: var(--card);
+  --color-card-foreground: var(--card-foreground);
+  --color-popover: var(--popover);
+  --color-popover-foreground: var(--popover-foreground);
   --color-primary: var(--primary);
+  --color-primary-foreground: var(--primary-foreground);
   --color-secondary: var(--secondary);
+  --color-secondary-foreground: var(--secondary-foreground);
   --color-muted: var(--muted);
+  --color-muted-foreground: var(--muted-foreground);
+  --color-accent: var(--accent);
+  --color-accent-foreground: var(--accent-foreground);
+  --color-destructive: var(--destructive);
+  --color-destructive-foreground: var(--destructive-foreground);
+  --color-border: var(--border);
+  --color-input: var(--input);
+  --color-input-background: var(--input-background);
+  --color-switch-background: var(--switch-background);
+  --color-ring: var(--ring);
+  --color-chart-1: var(--chart-1);
+  --color-chart-2: var(--chart-2);
+  --color-chart-3: var(--chart-3);
+  --color-chart-4: var(--chart-4);
+  --color-chart-5: var(--chart-5);
+  --radius-sm: calc(var(--radius) - 4px);
+  --radius-md: calc(var(--radius) - 2px);
+  --radius-lg: var(--radius);
+  --radius-xl: calc(var(--radius) + 4px);
+  --color-sidebar: var(--sidebar);
+  --color-sidebar-foreground: var(--sidebar-foreground);
+  --color-sidebar-primary: var(--sidebar-primary);
+  --color-sidebar-primary-foreground: var(--sidebar-primary-foreground);
+  --color-sidebar-accent: var(--sidebar-accent);
+  --color-sidebar-accent-foreground: var(--sidebar-accent-foreground);
+  --color-sidebar-border: var(--sidebar-border);
+  --color-sidebar-ring: var(--sidebar-ring);
   --font-sans: var(--font-geist-sans);
   --font-mono: var(--font-geist-mono);
 }
 
-body {
-  background: radial-gradient(circle at top left, rgba(30, 136, 229, 0.08), transparent 45%),
-    radial-gradient(circle at bottom right, rgba(38, 166, 154, 0.08), transparent 50%),
-    var(--background);
-  color: var(--foreground);
-  font-family: var(--font-geist-sans), system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+@layer base {
+  * {
+    border-color: var(--border);
+  }
+
+  body {
+    color: var(--foreground);
+    background: var(--background);
+    min-height: 100vh;
+    position: relative;
+    font-family: var(--font-geist-sans), system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+  }
+
+  body::before {
+    content: '';
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    background: var(--background);
+    z-index: -1;
+  }
+}
+
+/* Glass morphism utilities */
+@layer utilities {
+  .glass {
+    background: var(--card);
+    backdrop-filter: var(--glass-backdrop);
+    -webkit-backdrop-filter: var(--glass-backdrop);
+    border: 1px solid var(--glass-border);
+    box-shadow: var(--glass-shadow);
+    transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+  }
+
+  .glass-hover:hover {
+    box-shadow: var(--glass-hover-shadow);
+    transform: translateY(-2px);
+    border-color: rgba(255, 255, 255, 0.3);
+  }
+
+  .glass-intense {
+    background: rgba(255, 255, 255, 0.15);
+    backdrop-filter: blur(30px);
+    -webkit-backdrop-filter: blur(30px);
+    border: 1px solid rgba(255, 255, 255, 0.25);
+    box-shadow: 0 12px 40px rgba(31, 38, 135, 0.4);
+  }
+
+  .glass-subtle {
+    background: rgba(255, 255, 255, 0.05);
+    backdrop-filter: blur(15px);
+    -webkit-backdrop-filter: blur(15px);
+    border: 1px solid rgba(255, 255, 255, 0.1);
+    box-shadow: 0 4px 20px rgba(31, 38, 135, 0.2);
+  }
+
+  /* A small animated top bar using brand colors */
+  .bilby-topbar {
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 6px;
+    background: linear-gradient(90deg, var(--bilby-primary), var(--bilby-secondary), var(--bilby-accent));
+    background-size: 200% 100%;
+    animation: bilbybar 8s linear infinite;
+    z-index: 50;
+  }
+
+  /* Keep old animated-gradient utility for optional use, but not default */
+  .animated-gradient {
+    background: linear-gradient(-45deg, #e3f2fd, #ffffff, #f5f5f5, #e0f2f1);
+    background-size: 400% 400%;
+    animation: gradient 20s ease infinite;
+  }
+
+  .pulse-glow {
+    animation: pulse-glow 3s ease-in-out infinite;
+  }
+
+  .float {
+    animation: float 6s ease-in-out infinite;
+  }
+}
+
+@keyframes gradient {
+  0% { background-position: 0% 50%; }
+  50% { background-position: 100% 50%; }
+  100% { background-position: 0% 50%; }
+}
+
+@keyframes bilbybar {
+  0% { background-position: 0% 50%; }
+  100% { background-position: 200% 50%; }
+}
+
+@keyframes pulse-glow {
+  0%, 100% {
+    box-shadow: 0 0 20px rgba(255, 255, 255, 0.1);
+  }
+  50% {
+    box-shadow: 0 0 30px rgba(255, 255, 255, 0.2);
+  }
+}
+
+@keyframes float {
+  0%, 100% { transform: translateY(0px); }
+  50% { transform: translateY(-10px); }
+}
+
+/**
+ * Base typography. This is not applied to elements which have an ancestor with a Tailwind text class.
+ */
+@layer base {
+  :where(:not(:has([class*=" text-"]), :not(:has([class^="text-"])))) {
+    h1 {
+      font-size: var(--text-2xl);
+      font-weight: var(--font-weight-medium);
+      line-height: 1.5;
+    }
+
+    h2 {
+      font-size: var(--text-xl);
+      font-weight: var(--font-weight-medium);
+      line-height: 1.5;
+    }
+
+    h3 {
+      font-size: var(--text-lg);
+      font-weight: var(--font-weight-medium);
+      line-height: 1.5;
+    }
+
+    h4 {
+      font-size: var(--text-base);
+      font-weight: var(--font-weight-medium);
+      line-height: 1.5;
+    }
+
+    p {
+      font-size: var(--text-base);
+      font-weight: var(--font-weight-normal);
+      line-height: 1.5;
+    }
+
+    label {
+      font-size: var(--text-base);
+      font-weight: var(--font-weight-medium);
+      line-height: 1.5;
+    }
+
+    button {
+      font-size: var(--text-base);
+      font-weight: var(--font-weight-medium);
+      line-height: 1.5;
+    }
+
+    input {
+      font-size: var(--text-base);
+      font-weight: var(--font-weight-normal);
+      line-height: 1.5;
+    }
+  }
+}
+
+html {
+  font-size: var(--font-size);
 }
 
 a {
-  color: var(--primary);
+  color: var(--bilby-primary);
   text-decoration: none;
 }
 
 a:hover {
   text-decoration: underline;
+}
+
+/* --- Bilby subtle background gradient layer and glass tuning overrides --- */
+:root {
+  /* RGB variants for subtle translucent gradients */
+  --bilby-primary-rgb: 30, 136, 229;   /* #1E88E5 */
+  --bilby-secondary-rgb: 38, 166, 154; /* #26A69A */
+  --bilby-accent-rgb: 255, 112, 67;    /* #FF7043 */
+}
+
+.bilby-gradient-container {
+  position: relative;
+  isolation: isolate; /* keep background layer behind */
+}
+
+.bilby-gradient-bg {
+  position: absolute;
+  inset: 0;
+  z-index: -1;
+  pointer-events: none;
+  background:
+    radial-gradient(720px 520px at 85% -10%, rgba(var(--bilby-primary-rgb), 0.08), transparent 60%),
+    radial-gradient(640px 480px at -15% 25%, rgba(var(--bilby-secondary-rgb), 0.08), transparent 55%),
+    radial-gradient(420px 320px at 60% 110%, rgba(var(--bilby-accent-rgb), 0.06), transparent 60%);
+  filter: blur(6px);
+  transform: translateZ(0);
+}
+
+@keyframes bilby-floaty {
+  0%   { transform: translate3d(0, 0, 0); }
+  50%  { transform: translate3d(0, -6px, 0); }
+  100% { transform: translate3d(0, 0, 0); }
+}
+
+.bilby-gradient-bg.animate {
+  animation: bilby-floaty 12s ease-in-out infinite;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .bilby-gradient-bg.animate { animation: none; }
+}
+
+/* Override glass on light to ensure readability */
+.glass,
+.glass-subtle,
+.glass-intense {
+  color: var(--bilby-text);
+}
+
+.glass-subtle {
+  background: color-mix(in srgb, #fff 82%, transparent);
+  border-color: color-mix(in srgb, var(--bilby-border) 80%, transparent);
+  box-shadow: 0 1px 2px rgba(16, 24, 40, 0.04);
+  backdrop-filter: blur(6px);
+}
+
+.glass-intense {
+  background: color-mix(in srgb, #fff 75%, transparent);
+  border-color: color-mix(in srgb, var(--bilby-border) 90%, transparent);
+  box-shadow: 0 6px 24px rgba(16, 24, 40, 0.08);
+  backdrop-filter: blur(10px);
 }

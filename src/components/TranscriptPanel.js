@@ -60,7 +60,13 @@ function formatTimestamp(ts) {
   }
 }
 
-export default function TranscriptPanel({ room = "agent_demo", token = null, sessions = [] }) {
+export default function TranscriptPanel({
+  room = "agent_demo",
+  token = null,
+  sessions = [],
+  isRecording = false,
+  activeCall = null
+}) {
   const [messages, setMessages] = useState([]);
   const [status, setStatus] = useState(token ? "connecting" : "authorizing");
   const [url, setUrl] = useState(defaultObserverUrl());
@@ -197,35 +203,58 @@ export default function TranscriptPanel({ room = "agent_demo", token = null, ses
     return (sessions || []).filter((session) => session && session.startedAt && session.id);
   }, [sessions]);
 
+  // Mock AI analysis data for demonstration
+  const mockAIAnalysis = activeCall ? {
+    summary: `Call with ${activeCall.caller} regarding aged care coordination. Discussion covered medication management, care plan updates, and family communication needs.`,
+    keyPoints: [
+      "Medication schedule clarification needed",
+      "Family concerns about care quality",
+      "Care plan review scheduled",
+    ],
+    actionItems: [
+      "Update medication administration record",
+      "Schedule family meeting with care coordinator",
+      "Review care plan with nursing staff",
+    ],
+    concerns: ["Medication compliance", "Family communication"],
+    confidence: 92
+  } : null;
+
   return (
-    <Card className="h-full w-full border-[#e0e0e0] bg-white shadow-sm">
-      <CardHeader className="space-y-2 pb-2">
-        <div className="flex flex-wrap items-center justify-between gap-3">
-          <div className="space-y-1">
-            <div className="flex items-center gap-2 text-xs font-semibold uppercase tracking-[0.3em] text-primary">
-              <Mic className="h-3.5 w-3.5" /> Live
+    <div className="h-full flex flex-col">
+      {/* Live Transcription Section */}
+      <div className="flex-1 p-6 space-y-4">
+        <div className="glass-subtle rounded-2xl p-4 space-y-3">
+          <div className="flex items-center justify-between">
+            <div className="flex items-center gap-2">
+              <div className="p-2 bg-[color:var(--bilby-bg-muted)] border border-[color:var(--bilby-border)] rounded-lg">
+                <Mic className="h-4 w-4 text-[color:var(--bilby-primary)]" />
+              </div>
+              <div>
+                <h3 className="text-sm font-semibold text-[color:var(--bilby-text)]">Live Transcription</h3>
+                <p className="text-xs text-[color:var(--bilby-text)]/70">Room: {room}</p>
+              </div>
             </div>
-            <CardTitle className="text-2xl font-semibold text-foreground">Transcript</CardTitle>
-            <p className="text-xs text-slate-500">
-              Room: <span className="font-medium text-slate-700">{room}</span>
-            </p>
+            <Badge className={`px-3 py-1 text-xs font-medium border ${
+              status === "connected"
+                ? "bg-green-50 text-green-700 border-green-200"
+                : status === "error"
+                ? "bg-red-50 text-red-700 border-red-200"
+                : "bg-amber-50 text-amber-700 border-amber-200"
+            }`}>
+              {statusBadge.label}
+            </Badge>
           </div>
-          <Badge variant={statusBadge.variant}>{statusBadge.label}</Badge>
-        </div>
-        {tokenError ? (
-          <div className="rounded-md border border-accent/40 bg-accent/10 px-3 py-2 text-xs text-accent">
-            {tokenError}
-          </div>
-        ) : null}
-      </CardHeader>
-      <CardContent className="space-y-4 pt-0">
-        <section className="space-y-3 rounded-2xl border border-[#e0e0e0] bg-[#f8faff] px-4 py-4">
-          <p className="text-xs text-slate-600">
-            Connection status updates appear here. When transcription is active you should see agent and caller bubbles below.
-          </p>
-          <ScrollArea ref={scrollRef} className="h-[420px] rounded-xl border border-white bg-white px-4 py-4">
+
+          {tokenError ? (
+            <div className="rounded-lg px-3 py-2 text-xs text-red-700 bg-red-50 border border-red-200">
+              {tokenError}
+            </div>
+          ) : null}
+
+          <ScrollArea ref={scrollRef} className="h-[300px] bg-white border border-[color:var(--bilby-border)] rounded-xl p-4">
             {messages.length === 0 ? (
-              <div className="flex h-full flex-col items-center justify-center gap-3 text-sm text-slate-400">
+              <div className="flex h-full flex-col items-center justify-center gap-3 text-sm text-[color:var(--bilby-text)]/60">
                 {status === "error" ? <WifiOff className="h-5 w-5" /> : <MessageSquareText className="h-5 w-5" />}
                 {loadingToken
                   ? "Authorising stream..."
@@ -236,18 +265,24 @@ export default function TranscriptPanel({ room = "agent_demo", token = null, ses
                   : "Connecting to stream..."}
               </div>
             ) : (
-              <div className="flex flex-col gap-5">
+              <div className="flex flex-col gap-4">
                 {messages.map((m) => {
                   const cfg = channelConfig(m.channel);
                   const alignment = cfg.alignment === "items-end" ? "items-end text-right" : "items-start text-left";
-                  const bubbleClasses = `max-w-[75%] rounded-2xl px-4 py-2 shadow-sm ${cfg.bubble}`;
+                  const bubbleClasses = `max-w-[75%] rounded-2xl px-4 py-2 ${
+                    m.channel === "agent"
+                      ? "bg-[color:var(--bilby-primary)]/10 text-[color:var(--bilby-text)] border border-[color:var(--bilby-primary)]/25"
+                      : "bg-[color:var(--bilby-bg-muted)] text-[color:var(--bilby-text)] border border-[color:var(--bilby-border)]"
+                  }`;
                   const timestamp = formatTimestamp(m.ts);
                   return (
                     <div key={`${m.channel}-${m.segmentId}-${m.ts}`} className={`flex flex-col gap-1 ${alignment}`}>
-                      <div className="flex items-center gap-2 text-xs text-slate-400">
-                        <span className={`font-medium ${cfg.accent}`}>{cfg.label}</span>
+                      <div className="flex items-center gap-2 text-xs text-[color:var(--bilby-text)]/60">
+                        <span className={`font-medium ${m.channel === "agent" ? "text-[color:var(--bilby-primary)]" : "text-[color:var(--bilby-text)]"}`}>
+                          {cfg.label}
+                        </span>
                         {timestamp ? <span>{timestamp}</span> : null}
-                        {m.isFinal ? null : <span className="italic text-slate-300">partial</span>}
+                        {m.isFinal ? null : <span className="italic text-[color:var(--bilby-text)]/40">partial</span>}
                       </div>
                       <div className={bubbleClasses}>{m.text}</div>
                     </div>
@@ -256,60 +291,103 @@ export default function TranscriptPanel({ room = "agent_demo", token = null, ses
               </div>
             )}
           </ScrollArea>
-        </section>
+        </div>
 
-        <section className="rounded-2xl border border-[#e0e0e0] bg-white px-4 py-4 shadow-sm">
-          <div className="flex items-start gap-3">
-            <div className="rounded-full bg-primary/10 p-2 text-primary">
-              <Sparkles className="h-4 w-4" />
+        {/* AI Analysis Section */}
+        {mockAIAnalysis && (
+          <div className="glass-subtle rounded-2xl p-4 space-y-4">
+            <div className="flex items-center gap-3">
+              <div className="p-2 bg-[color:var(--bilby-bg-muted)] border border-[color:var(--bilby-border)] rounded-lg">
+                <Sparkles className="h-4 w-4 text-[color:var(--bilby-primary)]" />
+              </div>
+              <div>
+                <h3 className="text-sm font-semibold text-[color:var(--bilby-text)]">AI Analysis</h3>
+                <p className="text-xs text-[color:var(--bilby-text)]/70">Confidence: {mockAIAnalysis.confidence}%</p>
+              </div>
             </div>
-            <div className="space-y-1">
-              <p className="text-sm font-semibold text-foreground">AI summary</p>
-              <p className="text-xs text-slate-500">Coming soon — BilbyAI will surface call summaries and action items here.</p>
+
+            <div className="space-y-3">
+              <div className="bg-white border border-[color:var(--bilby-border)] rounded-lg p-3">
+                <h4 className="text-xs font-semibold uppercase tracking-wide text-[color:var(--bilby-text)]/60 mb-2">Summary</h4>
+                <p className="text-sm text-[color:var(--bilby-text)]/85 leading-relaxed">{mockAIAnalysis.summary}</p>
+              </div>
+
+              <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
+                <div className="bg-white border border-[color:var(--bilby-border)] rounded-lg p-3">
+                  <h4 className="text-xs font-semibold uppercase tracking-wide text-[color:var(--bilby-text)]/60 mb-2">Key Points</h4>
+                  <ul className="space-y-1">
+                    {mockAIAnalysis.keyPoints.map((point, idx) => (
+                      <li key={idx} className="text-xs text-[color:var(--bilby-text)]/85 flex items-start gap-2">
+                        <span className="w-1 h-1 bg-[color:var(--bilby-text)]/40 rounded-full mt-2 flex-shrink-0"></span>
+                        {point}
+                      </li>
+                    ))}
+                  </ul>
+                </div>
+
+                <div className="bg-white border border-[color:var(--bilby-border)] rounded-lg p-3">
+                  <h4 className="text-xs font-semibold uppercase tracking-wide text-[color:var(--bilby-text)]/60 mb-2">Action Items</h4>
+                  <ul className="space-y-1">
+                    {mockAIAnalysis.actionItems.map((item, idx) => (
+                      <li key={idx} className="text-xs text-[color:var(--bilby-text)]/85 flex items-start gap-2">
+                        <span className="w-1 h-1 bg-green-400 rounded-full mt-2 flex-shrink-0"></span>
+                        {item}
+                      </li>
+                    ))}
+                  </ul>
+                </div>
+
+                <div className="bg-white border border-[color:var(--bilby-border)] rounded-lg p-3">
+                  <h4 className="text-xs font-semibold uppercase tracking-wide text-[color:var(--bilby-text)]/60 mb-2">Concerns</h4>
+                  <ul className="space-y-1">
+                    {mockAIAnalysis.concerns.map((concern, idx) => (
+                      <li key={idx} className="text-xs text-[color:var(--bilby-text)]/85 flex items-start gap-2">
+                        <span className="w-1 h-1 bg-orange-400 rounded-full mt-2 flex-shrink-0"></span>
+                        {concern}
+                      </li>
+                    ))}
+                  </ul>
+                </div>
+              </div>
             </div>
           </div>
-        </section>
+        )}
 
-        <section className="space-y-3 rounded-2xl border border-[#e0e0e0] bg-white px-4 py-4 shadow-sm">
-          <label className="text-xs font-medium text-slate-500" htmlFor="observer-url">
-            Observer URL
-          </label>
-          <Input
-            id="observer-url"
-            className="h-8 rounded-lg border-[#d9d9d9] text-xs"
-            value={url}
-            onChange={(e) => setUrl(e.target.value)}
-            placeholder="wss://.../api/stream"
-          />
-        </section>
+        {/* Settings Section removed per design (observer URL unnecessary) */}
 
+        {/* Past Sessions */}
         {previousSessions.length ? (
-          <section className="space-y-3">
-            <div className="flex items-center gap-2 text-sm font-semibold text-foreground">
-              <FileText className="h-4 w-4 text-primary" /> Past sessions
+          <div className="glass-subtle rounded-2xl p-4 space-y-3">
+            <div className="flex items-center gap-2">
+              <FileText className="h-4 w-4 text-[color:var(--bilby-text)]/80" />
+              <h4 className="text-sm font-semibold text-[color:var(--bilby-text)]">Past Sessions</h4>
             </div>
-            <div className="space-y-3">
+            <div className="space-y-2">
               {previousSessions.map((session) => (
-                <div key={session.id} className="rounded-2xl border border-[#e0e0e0] bg-white px-4 py-3 shadow-sm">
+                <div key={session.id} className="bg-white border border-[color:var(--bilby-border)] rounded-lg px-3 py-2">
                   <div className="flex items-center justify-between text-sm">
                     <div className="flex items-center gap-2">
-                      <Badge variant={session.direction === "outbound" ? "outline" : "secondary"} className="text-xs">
+                      <Badge className={`text-xs border ${
+                        session.direction === "outbound"
+                          ? "bg-blue-50 text-blue-700 border-blue-200"
+                          : "bg-emerald-50 text-emerald-700 border-emerald-200"
+                      }`}>
                         {session.direction || "session"}
                       </Badge>
-                      <span className="font-semibold text-foreground">{session.peer || session.number || "Call"}</span>
+                      <span className="font-medium text-[color:var(--bilby-text)]">{session.peer || session.number || "Call"}</span>
                     </div>
-                    <span className="text-xs text-slate-500">{formatTimestamp(session.startedAt)}</span>
+                    <span className="text-xs text-[color:var(--bilby-text)]/60">{formatTimestamp(session.startedAt)}</span>
                   </div>
-                  <p className="mt-2 text-xs text-slate-500">
-                    AI summary coming soon. Duration: {historyDuration(session.durationMs)}
+                  <p className="mt-1 text-xs text-[color:var(--bilby-text)]/70">
+                    Duration: {historyDuration(session.durationMs)} • AI analysis available
                   </p>
                 </div>
               ))}
             </div>
-          </section>
+          </div>
         ) : null}
-      </CardContent>
-    </Card>
+      </div>
+    </div>
   );
 }
 

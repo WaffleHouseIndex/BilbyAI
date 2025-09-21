@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from './ui/card';
 import { Badge } from './ui/badge';
 import { Button } from './ui/button';
@@ -17,7 +17,8 @@ import {
   Delete,
   Plus,
   History,
-  Users
+  Users,
+  PhoneOff
 } from 'lucide-react';
 
 interface CallRecord {
@@ -37,7 +38,22 @@ interface Contact {
   type: 'family' | 'doctor' | 'emergency' | 'staff';
 }
 
-export function PhoneSection() {
+interface ActiveCall {
+  id: string;
+  phoneNumber: string;
+  caller: string;
+  startTime: Date;
+  duration: number;
+}
+
+interface PhoneSectionProps {
+  onOutgoingCall: (phoneNumber: string, callerName?: string) => void;
+  onIncomingCall: (phoneNumber: string, callerName: string) => void;
+  activeCall: ActiveCall | null;
+  isCallActive: boolean;
+}
+
+export function PhoneSection({ onOutgoingCall, onIncomingCall, activeCall, isCallActive }: PhoneSectionProps) {
   const [activeTab, setActiveTab] = useState('dialer');
   const [phoneNumber, setPhoneNumber] = useState('');
   const [callHistory, setCallHistory] = useState<CallRecord[]>([
@@ -111,10 +127,53 @@ export function PhoneSection() {
 
   const handleCall = (number?: string) => {
     const numberToCall = number || phoneNumber;
-    if (numberToCall) {
-      // Simulate making a call
-      console.log(`Calling ${numberToCall}`);
-      // Here you would integrate with actual phone system
+    if (numberToCall && !isCallActive) {
+      // Find contact name if available
+      const contact = contacts.find(c => c.number === numberToCall);
+      const callerName = contact?.name || `Call to ${numberToCall}`;
+      
+      // Create a call history entry
+      const newCallRecord: CallRecord = {
+        id: `call-${Date.now()}`,
+        number: numberToCall,
+        name: contact?.name,
+        type: 'outgoing',
+        timestamp: new Date(),
+        status: 'completed'
+      };
+      
+      setCallHistory(prev => [newCallRecord, ...prev]);
+      
+      // Trigger the outgoing call
+      onOutgoingCall(numberToCall, callerName);
+      
+      // Clear the dialer after making a call
+      setPhoneNumber('');
+    }
+  };
+
+  // Handle simulating demo calls
+  const handleSimulateIncomingCall = () => {
+    if (!isCallActive) {
+      const demoCallers = [
+        { name: 'Margaret Wilson (Family)', number: '+1 (555) 123-4567' },
+        { name: 'Dr. Sarah Chen', number: '+1 (555) 987-6543' },
+        { name: 'James Thompson (Family)', number: '+1 (555) 456-7890' }
+      ];
+      
+      const randomCaller = demoCallers[Math.floor(Math.random() * demoCallers.length)];
+      
+      const newCallRecord: CallRecord = {
+        id: `call-${Date.now()}`,
+        number: randomCaller.number,
+        name: randomCaller.name,
+        type: 'incoming',
+        timestamp: new Date(),
+        status: 'completed'
+      };
+      
+      setCallHistory(prev => [newCallRecord, ...prev]);
+      onIncomingCall(randomCaller.number, randomCaller.name);
     }
   };
 
@@ -173,57 +232,68 @@ export function PhoneSection() {
   return (
     <div className="h-full flex flex-col">
       {/* Header */}
-      <div className="p-4 border-b">
-        <div className="flex items-center gap-2 mb-3">
-          <Phone className="h-5 w-5 text-primary" />
-          <h2 className="font-semibold">Phone System</h2>
+      <div className="p-6 border-b border-white/20">
+        <div className="flex items-center gap-3 mb-3">
+          <Phone className="h-6 w-6 text-white/90" />
+          <h2 className="font-bold text-lg text-white/95">Phone System</h2>
           {missedCallsCount > 0 && (
-            <Badge variant="destructive" className="ml-auto">
+            <Badge variant="destructive" className="ml-auto glass-subtle bg-red-500/20 text-red-100 border-0">
               {missedCallsCount} missed
             </Badge>
           )}
         </div>
+        
+        {/* Demo Call Button */}
+        <Button 
+          variant="outline" 
+          size="sm" 
+          className="glass-subtle border-white/20 text-white/80 hover:bg-white/20 hover:text-white mb-2"
+          onClick={handleSimulateIncomingCall}
+          disabled={isCallActive}
+        >
+          📞 Simulate Incoming Call
+        </Button>
       </div>
 
       {/* Phone Interface */}
       <div className="flex-1 overflow-hidden">
         <Tabs value={activeTab} onValueChange={setActiveTab} className="h-full flex flex-col">
-          <TabsList className="grid w-full grid-cols-3 mx-4 mt-4">
-            <TabsTrigger value="dialer">Dialer</TabsTrigger>
-            <TabsTrigger value="history">
+          <TabsList className="grid w-full grid-cols-3 mx-6 mt-4 glass-subtle bg-white/5 border-white/20">
+            <TabsTrigger value="dialer" className="text-white/80 data-[state=active]:bg-white/20 data-[state=active]:text-white">Dialer</TabsTrigger>
+            <TabsTrigger value="history" className="text-white/80 data-[state=active]:bg-white/20 data-[state=active]:text-white">
               <History className="h-3 w-3 mr-1" />
               History
             </TabsTrigger>
-            <TabsTrigger value="contacts">
+            <TabsTrigger value="contacts" className="text-white/80 data-[state=active]:bg-white/20 data-[state=active]:text-white">
               <Users className="h-3 w-3 mr-1" />
               Contacts
             </TabsTrigger>
           </TabsList>
 
           {/* Dialer Tab */}
-          <TabsContent value="dialer" className="flex-1 p-4 space-y-4">
+          <TabsContent value="dialer" className="flex-1 p-6 space-y-6">
             {/* Phone Number Display */}
-            <Card>
-              <CardContent className="p-4">
+            <Card className="glass-subtle border-white/20">
+              <CardContent className="p-6">
                 <Input
                   value={getPhoneNumberWithDots()}
                   readOnly
                   placeholder="(•••) •••-••••"
-                  className="text-center text-lg h-12 font-mono tracking-wider"
+                  className="text-center text-xl h-14 font-mono tracking-wider bg-white/5 border-white/20 text-white/95 placeholder:text-white/50"
                 />
               </CardContent>
             </Card>
 
             {/* Number Pad */}
-            <Card>
-              <CardContent className="p-4">
-                <div className="grid grid-cols-3 gap-3">
+            <Card className="glass-subtle border-white/20">
+              <CardContent className="p-6">
+                <div className="grid grid-cols-3 gap-4">
                   {['1', '2', '3', '4', '5', '6', '7', '8', '9', '*', '0', '#'].map((digit) => (
                     <Button
                       key={digit}
                       variant="outline"
                       size="lg"
-                      className="h-12 text-lg font-semibold"
+                      className="h-14 text-xl font-bold glass-subtle border-white/20 text-white/90 hover:bg-white/20 hover:text-white transition-all duration-300"
                       onClick={() => handleNumberInput(digit)}
                     >
                       {digit}
@@ -234,11 +304,11 @@ export function PhoneSection() {
             </Card>
 
             {/* Call Actions */}
-            <div className="flex gap-3">
+            <div className="flex gap-4">
               <Button
                 variant="outline"
                 size="lg"
-                className="flex-1"
+                className="flex-1 glass-subtle border-white/20 text-white/80 hover:bg-white/10 hover:text-white h-12"
                 onClick={handleDelete}
                 disabled={!phoneNumber}
               >
@@ -248,6 +318,7 @@ export function PhoneSection() {
               <Button
                 variant="outline"
                 size="lg"
+                className="glass-subtle border-white/20 text-white/80 hover:bg-white/10 hover:text-white h-12 px-6"
                 onClick={handleClear}
                 disabled={!phoneNumber}
               >
@@ -255,12 +326,25 @@ export function PhoneSection() {
               </Button>
               <Button
                 size="lg"
-                className="flex-1 bg-green-600 hover:bg-green-700"
+                className={`flex-1 ${
+                  isCallActive 
+                    ? 'bg-gradient-to-r from-red-500/80 to-red-600/80 hover:from-red-400/90 hover:to-red-500/90' 
+                    : 'bg-gradient-to-r from-green-500/80 to-emerald-500/80 hover:from-green-400/90 hover:to-emerald-400/90'
+                } text-white border-0 h-12 glass-hover transition-all duration-300`}
                 onClick={() => handleCall()}
-                disabled={!phoneNumber}
+                disabled={!phoneNumber || isCallActive}
               >
-                <PhoneCall className="h-4 w-4 mr-2" />
-                Call
+                {isCallActive ? (
+                  <>
+                    <PhoneOff className="h-4 w-4 mr-2" />
+                    Call Active
+                  </>
+                ) : (
+                  <>
+                    <PhoneCall className="h-4 w-4 mr-2" />
+                    Call
+                  </>
+                )}
               </Button>
             </div>
           </TabsContent>
@@ -268,33 +352,33 @@ export function PhoneSection() {
           {/* History Tab */}
           <TabsContent value="history" className="flex-1">
             <ScrollArea className="h-full">
-              <div className="p-4 space-y-3">
-                <div className="flex items-center justify-between mb-4">
-                  <h3 className="font-medium">Recent Calls</h3>
-                  <Badge variant="outline">
+              <div className="p-6 space-y-4">
+                <div className="flex items-center justify-between mb-6">
+                  <h3 className="font-bold text-lg text-white/95">Recent Calls</h3>
+                  <Badge variant="outline" className="glass-subtle bg-white/10 text-white/80 border-white/20">
                     {callHistory.length} calls
                   </Badge>
                 </div>
                 
                 {callHistory.map((call) => (
-                  <Card key={call.id} className="p-3">
-                    <div className="flex items-center gap-3">
+                  <Card key={call.id} className="p-4 glass-subtle border-white/20 glass-hover">
+                    <div className="flex items-center gap-4">
                       {getCallIcon(call.type, call.status)}
                       
                       <div className="flex-1">
                         <div className="flex items-center justify-between">
-                          <p className="font-medium text-sm">
+                          <p className="font-semibold text-sm text-white/95">
                             {call.name || 'Unknown'}
                           </p>
-                          <span className="text-xs text-muted-foreground">
+                          <span className="text-xs text-white/60">
                             {call.timestamp.toLocaleTimeString()}
                           </span>
                         </div>
-                        <p className="text-sm text-muted-foreground">
+                        <p className="text-sm text-white/70">
                           {call.number}
                         </p>
                         {call.duration && (
-                          <p className="text-xs text-muted-foreground">
+                          <p className="text-xs text-white/60">
                             Duration: {call.duration}
                           </p>
                         )}
@@ -303,9 +387,11 @@ export function PhoneSection() {
                       <Button
                         variant="ghost"
                         size="sm"
+                        className="glass-subtle border-white/20 text-white/80 hover:bg-white/20 hover:text-white"
                         onClick={() => handleCall(call.number)}
+                        disabled={isCallActive}
                       >
-                        <PhoneCall className="h-3 w-3" />
+                        <PhoneCall className="h-4 w-4" />
                       </Button>
                     </div>
                   </Card>
@@ -317,29 +403,29 @@ export function PhoneSection() {
           {/* Contacts Tab */}
           <TabsContent value="contacts" className="flex-1">
             <ScrollArea className="h-full">
-              <div className="p-4 space-y-3">
-                <div className="flex items-center justify-between mb-4">
-                  <h3 className="font-medium">Quick Contacts</h3>
-                  <Button variant="outline" size="sm">
+              <div className="p-6 space-y-4">
+                <div className="flex items-center justify-between mb-6">
+                  <h3 className="font-bold text-lg text-white/95">Quick Contacts</h3>
+                  <Button variant="outline" size="sm" className="glass-subtle border-white/20 text-white/80 hover:bg-white/20 hover:text-white">
                     <Plus className="h-3 w-3 mr-1" />
                     Add
                   </Button>
                 </div>
                 
                 {contacts.map((contact) => (
-                  <Card key={contact.id} className="p-3">
-                    <div className="flex items-center gap-3">
+                  <Card key={contact.id} className="p-4 glass-subtle border-white/20 glass-hover">
+                    <div className="flex items-center gap-4">
                       <div className="flex-1">
                         <div className="flex items-center gap-2 mb-1">
-                          <p className="font-medium text-sm">{contact.name}</p>
+                          <p className="font-semibold text-sm text-white/95">{contact.name}</p>
                           <Badge 
-                            className={getContactTypeColor(contact.type)} 
+                            className="glass-subtle border-white/20 text-white/80 px-2 py-1" 
                             variant="secondary"
                           >
                             {contact.type}
                           </Badge>
                         </div>
-                        <p className="text-sm text-muted-foreground">
+                        <p className="text-sm text-white/70">
                           {contact.number}
                         </p>
                       </div>
@@ -347,9 +433,11 @@ export function PhoneSection() {
                       <Button
                         variant="ghost"
                         size="sm"
+                        className="glass-subtle border-white/20 text-white/80 hover:bg-white/20 hover:text-white"
                         onClick={() => handleCall(contact.number)}
+                        disabled={isCallActive}
                       >
-                        <PhoneCall className="h-3 w-3" />
+                        <PhoneCall className="h-4 w-4" />
                       </Button>
                     </div>
                   </Card>

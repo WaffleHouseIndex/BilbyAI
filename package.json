@@ -21,6 +21,7 @@
     "nodemailer": "^6.10.1",
     "react": "19.1.0",
     "react-dom": "19.1.0",
+    "react-resizable-panels": "^2.1.7",
     "resend": "^3.4.0",
     "stripe": "^16.10.0",
     "twilio": "^5.9.0"

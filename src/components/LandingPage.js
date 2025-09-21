@@ -2,7 +2,6 @@
 
 import { useMemo, useState } from "react";
 import Link from "next/link";
-import { loadStripe } from "@stripe/stripe-js";
 import {
   ArrowRight,
   ChartLine,
@@ -11,6 +10,8 @@ import {
   PhoneCall,
   ShieldCheck,
   Users,
+  Phone,
+  Settings,
 } from "lucide-react";
 
 import { Button } from "@/components/ui/button";
@@ -18,27 +19,18 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
 
-let stripePromise;
-function getStripePromise() {
-  if (!stripePromise && typeof window !== "undefined") {
-    const publishableKey = process.env.NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY || "";
-    if (publishableKey) {
-      stripePromise = loadStripe(publishableKey);
-    }
-  }
-  return stripePromise;
-}
+// checkout moved to /pricing
 
 const featureCards = [
   {
     title: "Live transcription",
     description:
-      "Dual-channel audio streams into AWS Transcribe with sub-two-second latency for both caller and agent.",
+      "Realtime transcription with caller and agent identification.",
     icon: Mic,
   },
   {
     title: "Australian residency",
-    description: "Twilio edge Sydney plus AWS ap-southeast-2 keeps sensitive care conversations onshore.",
+    description: "All data is processed within Australian jurisidiction.",
     icon: Globe2,
   },
   {
@@ -70,199 +62,119 @@ const workflow = [
   },
 ];
 
+import PageSurface from "@/components/PageSurface";
+
 export default function LandingPage({ user }) {
   const [email, setEmail] = useState(user?.email || "");
-  const [status, setStatus] = useState("idle");
-  const [message, setMessage] = useState("");
 
-  const publishableKey = process.env.NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY || "";
-  const stripeReady = Boolean(publishableKey);
   const stats = useMemo(() => metrics, []);
   const currentYear = new Date().getFullYear();
-  const messageTone = status === "error" ? "text-red-200" : "text-emerald-200";
-
-  async function handleCheckout(event) {
-    event.preventDefault();
-    if (!stripeReady) {
-      setMessage("Stripe publishable key missing. Contact the BilbyAI team.");
-      setStatus("error");
-      return;
-    }
-    if (!email) {
-      setMessage("Add a work email so we can provision your account.");
-      setStatus("error");
-      return;
-    }
-
-    try {
-      setStatus("loading");
-      setMessage("");
-      const res = await fetch("/api/billing/checkout", {
-        method: "POST",
-        headers: { "content-type": "application/json" },
-        body: JSON.stringify({ email }),
-      });
-      const data = await res.json();
-      if (!res.ok) {
-        throw new Error(data?.error || "Unable to start checkout");
-      }
-
-      const stripe = await getStripePromise();
-      if (!stripe) {
-        throw new Error("Stripe client failed to load");
-      }
-
-      const result = await stripe.redirectToCheckout({ sessionId: data.sessionId });
-      if (result.error) {
-        throw new Error(result.error.message);
-      }
-      setStatus("success");
-    } catch (err) {
-      setStatus("error");
-      setMessage(err?.message || "Checkout failed");
-    }
-  }
+  // checkout handled in /pricing
 
   return (
-    <div className="flex min-h-screen flex-col">
-      <section className="relative overflow-hidden bg-gradient-to-br from-primary via-secondary to-primary/80 text-white">
-        <div className="absolute left-1/2 top-0 h-[480px] w-[480px] -translate-x-1/2 rounded-full bg-white/10 blur-3xl" />
-        <div className="relative mx-auto flex w-full max-w-6xl flex-col gap-12 px-6 py-24 md:flex-row md:items-center">
+    <PageSurface>
+    <div className="min-h-screen bg-transparent relative">
+
+      {/* Header */}
+      <header className="bg-white border-b border-[var(--bilby-border)] relative z-10">
+        <div className="mx-auto flex h-16 max-w-7xl items-center justify-between px-6">
+          <div className="flex items-center gap-3">
+            <div className="p-2 rounded-xl bg-[color:var(--bilby-bg-muted)]">
+              <Phone className="h-6 w-6 text-[color:var(--bilby-primary)]" />
+            </div>
+            <span className="text-xl font-bold text-[color:var(--bilby-text)] tracking-tight">BilbyAI</span>
+          </div>
+          <nav className="flex items-center gap-6">
+            <a href="#features" className="text-sm text-[color:var(--bilby-text)]/80 hover:text-[color:var(--bilby-text)] font-medium transition-colors">
+              Features
+            </a>
+            <Link href="/pricing" className="text-sm text-[color:var(--bilby-text)]/80 hover:text-[color:var(--bilby-text)] font-medium transition-colors">
+              Pricing
+            </Link>
+            <Button asChild variant="outline" size="sm" className="border-[color:var(--bilby-border)] text-[color:var(--bilby-text)] hover:bg-[color:var(--bilby-bg-muted)]">
+              <Link href="/login">Sign In</Link>
+            </Button>
+          </nav>
+        </div>
+      </header>
+
+      <section className="relative z-10 py-20">
+        <div className="mx-auto flex w-full max-w-6xl flex-col gap-12 px-6 md:flex-row md:items-center">
           <div className="flex-1 space-y-6">
-            <Badge variant="outline" className="border-white/40 bg-white/10 text-white">
+            <Badge className="bg-[color:var(--bilby-bg-muted)] text-[color:var(--bilby-text)] px-4 py-2 text-sm font-medium border border-[color:var(--bilby-border)]">
               Alpha launch
             </Badge>
-            <h1 className="text-4xl font-semibold leading-tight sm:text-5xl">
-              Twilio-powered calling and live transcription crafted for Australian aged-care teams.
+            <h1 className="text-4xl font-bold leading-tight sm:text-5xl text-[color:var(--bilby-text)]">
+              AI-powered voice call agent that keeps you present in care.
             </h1>
-            <p className="max-w-2xl text-lg text-white/80">
-              Give every agent a dedicated AU number, capture conversations in real time, and satisfy APP compliance requirements without complex infrastructure.
+            <p className="max-w-2xl text-lg text-[color:var(--bilby-text)]/80 leading-relaxed">
+              Every agent receives a dedicated AU number, captures conversations in real time, and on track to APP compliance requirements.
             </p>
-            <div className="flex flex-wrap gap-4 text-sm text-white/80">
+            <div className="flex flex-wrap gap-4 text-sm text-[color:var(--bilby-text)]/80">
               {stats.map((item) => (
-                <div key={item.label} className="rounded-full border border-white/30 px-4 py-2">
-                  <span className="font-semibold text-white">{item.value}</span>
-                  <span className="ml-1 text-white/70">{item.label}</span>
+                <div key={item.label} className="rounded-full bg-[color:var(--bilby-bg-muted)] border border-[color:var(--bilby-border)] px-4 py-2">
+                  <span className="font-semibold text-[color:var(--bilby-text)]">{item.value}</span>
+                  <span className="ml-1 text-[color:var(--bilby-text)]/70">{item.label}</span>
                 </div>
               ))}
             </div>
             <div className="flex flex-wrap gap-3">
               {user ? (
-                <Button asChild size="lg" className="bg-white text-primary hover:bg-white/90">
+                <Button asChild size="lg" className="bg-[color:var(--bilby-primary)] text-white hover:brightness-95">
                   <Link href="/console">
                     Open console <ArrowRight className="ml-2 h-4 w-4" />
                   </Link>
                 </Button>
               ) : (
-                <Button
-                  asChild
-                  size="lg"
-                  variant="secondary"
-                  className="bg-secondary text-secondary-foreground hover:bg-secondary/90"
-                >
-                  <Link href="/login">
-                    Sign in <ArrowRight className="ml-2 h-4 w-4" />
-                  </Link>
+                <Button asChild size="lg" className="bg-[color:var(--bilby-primary)] text-white hover:brightness-95">
+                  <Link href="/login">Sign in <ArrowRight className="ml-2 h-4 w-4" /></Link>
                 </Button>
               )}
-              <Button asChild size="lg" variant="ghost" className="text-white hover:bg-white/10">
-                <Link href="#pricing">See pricing</Link>
+              <Button asChild size="lg" variant="outline" className="border-[color:var(--bilby-border)] text-[color:var(--bilby-text)] hover:bg-[color:var(--bilby-bg-muted)]">
+                <Link href="/pricing">See pricing</Link>
               </Button>
             </div>
           </div>
-          <Card id="pricing" className="w-full max-w-md border-white/40 bg-white/10 text-white backdrop-blur">
-            <CardHeader className="space-y-2">
-              <CardTitle className="text-3xl font-semibold">$149 AUD</CardTitle>
-              <p className="text-sm text-white/80">per agent, billed monthly via Stripe</p>
-            </CardHeader>
-            <CardContent className="space-y-5">
-              <ul className="space-y-3 text-sm text-white/80">
-                <li className="flex items-start gap-2">
-                  <PhoneCall className="mt-0.5 h-4 w-4" /> Dedicated AU Twilio number and browser dialer
-                </li>
-                <li className="flex items-start gap-2">
-                  <Mic className="mt-0.5 h-4 w-4" /> Real-time transcription with diarised speaker labels
-                </li>
-                <li className="flex items-start gap-2">
-                  <ShieldCheck className="mt-0.5 h-4 w-4" /> Temporary processing aligned to Australian Privacy Principles
-                </li>
-                <li className="flex items-start gap-2">
-                  <ChartLine className="mt-0.5 h-4 w-4" /> Health analytics hooks ready for future copilots
-                </li>
-              </ul>
-              <form className="space-y-3" onSubmit={handleCheckout}>
-                <div className="space-y-1">
-                  <label htmlFor="checkout-email" className="text-xs uppercase tracking-wide text-white/60">
-                    Work email
-                  </label>
-                  <Input
-                    id="checkout-email"
-                    type="email"
-                    autoComplete="email"
-                    value={email}
-                    onChange={(event) => setEmail(event.target.value)}
-                    placeholder="care.team@example.com"
-                    className="border-white/30 bg-white/10 text-white placeholder:text-white/40"
-                    required
-                  />
-                </div>
-                <Button
-                  type="submit"
-                  className="w-full bg-white text-primary hover:bg-white/90 disabled:bg-white/50"
-                  disabled={status === "loading"}
-                >
-                  {status === "loading" ? "Routing to Stripe…" : "Start checkout"}
-                </Button>
-              </form>
-              {message ? (
-                <p className={`text-sm ${messageTone}`}>{message}</p>
-              ) : null}
-              {!stripeReady ? (
-                <p className="text-xs text-yellow-200/90">
-                  Stripe publishable key missing. Add NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY to enable checkout links.
-                </p>
-              ) : null}
-            </CardContent>
-          </Card>
+          {/* Pricing moved to /pricing */}
         </div>
       </section>
 
-      <section className="bg-background py-20">
+      <section id="features" className="py-20 relative z-10">
         <div className="mx-auto grid max-w-6xl gap-6 px-6 md:grid-cols-3">
           {featureCards.map((item) => (
-            <Card key={item.title} className="border border-[#e0e0e0] bg-surface shadow-sm">
-              <CardHeader className="flex flex-row items-center gap-3 pb-2">
-                <div className="flex h-10 w-10 items-center justify-center rounded-full bg-primary/10 text-primary">
-                  <item.icon className="h-5 w-5" />
+            <div key={item.title} className="bg-white border border-[color:var(--bilby-border)] rounded-2xl p-6 shadow-sm">
+              <div className="flex items-center gap-3 mb-4">
+                <div className="p-3 rounded-xl bg-[color:var(--bilby-bg-muted)]">
+                  <item.icon className="h-5 w-5 text-[color:var(--bilby-primary)]" />
                 </div>
-                <CardTitle className="text-lg text-foreground">{item.title}</CardTitle>
-              </CardHeader>
-              <CardContent className="text-sm text-slate-600">{item.description}</CardContent>
-            </Card>
+                <h3 className="text-lg font-semibold text-[color:var(--bilby-text)]">{item.title}</h3>
+              </div>
+              <p className="text-sm text-[color:var(--bilby-text)]/80 leading-relaxed">{item.description}</p>
+            </div>
           ))}
         </div>
       </section>
 
-      <section className="bg-surface py-20">
+      <section className="py-20 relative z-10">
         <div className="mx-auto flex w-full max-w-6xl flex-col gap-10 px-6 md:flex-row md:items-start">
           <div className="space-y-4 md:w-1/2">
-            <Badge variant="outline" className="border-primary/40 text-primary">
+            <Badge className="bg-[color:var(--bilby-bg-muted)] text-[color:var(--bilby-text)] px-4 py-2 text-sm font-medium border border-[color:var(--bilby-border)]">
               Provisioning playbook
             </Badge>
-            <h2 className="text-3xl font-semibold text-foreground">How BilbyAI automates agent onboarding.</h2>
-            <p className="text-slate-600">
-              From the moment you submit payment we orchestrate Twilio provisioning, media stream security, and call console setup—delivering a usable seat in minutes.
+            <h2 className="text-3xl font-bold text-[color:var(--bilby-text)]">How BilbyAI automates agent onboarding.</h2>
+            <p className="text-[color:var(--bilby-text)]/80 leading-relaxed">
+              From the moment you submit payment we provision you an AU number, media stream security, and call console setup—delivering a usable app in minutes.
             </p>
           </div>
           <div className="space-y-6 md:w-1/2">
             {workflow.map((item, idx) => (
               <div key={item.title} className="flex gap-4">
-                <div className="mt-1 flex h-8 w-8 items-center justify-center rounded-full bg-secondary/20 text-secondary">
+                <div className="mt-1 flex h-10 w-10 aspect-square shrink-0 items-center justify-center rounded-full bg-[color:var(--bilby-primary)] text-white font-semibold">
                   {idx + 1}
                 </div>
                 <div className="space-y-1">
-                  <h3 className="text-lg font-semibold text-foreground">{item.title}</h3>
-                  <p className="text-sm text-slate-600">{item.copy}</p>
+                  <h3 className="text-lg font-semibold text-[color:var(--bilby-text)]">{item.title}</h3>
+                  <p className="text-sm text-[color:var(--bilby-text)]/80 leading-relaxed">{item.copy}</p>
                 </div>
               </div>
             ))}
@@ -270,53 +182,58 @@ export default function LandingPage({ user }) {
         </div>
       </section>
 
-      <section className="bg-background py-20">
+      <section className="py-20 relative z-10">
         <div className="mx-auto flex max-w-5xl flex-col items-center gap-6 px-6 text-center">
-          <Badge variant="outline" className="border-secondary/40 text-secondary">
+          <Badge className="bg-[color:var(--bilby-bg-muted)] text-[color:var(--bilby-text)] px-4 py-2 text-sm font-medium border border-[color:var(--bilby-border)]">
             Built for care teams
           </Badge>
-          <h2 className="text-3xl font-semibold text-foreground">
+          <h2 className="text-3xl font-bold text-[color:var(--bilby-text)]">
             Ready to unite calls, documentation, and compliance?
           </h2>
-          <p className="max-w-3xl text-slate-600">
-            BilbyAI keeps audio and transcripts ephemeral while empowering agents with context-rich conversations. We’re shipping quickly—join the alpha to influence the roadmap.
+          <p className="max-w-3xl text-[color:var(--bilby-text)]/80 leading-relaxed">
+            BilbyAI keeps audio and transcripts ephemeral while empowering agents with context-rich conversations. We&apos;re shipping quickly—join the alpha to influence the roadmap.
           </p>
           <div className="flex flex-wrap items-center justify-center gap-3">
-            <Button asChild size="lg" className="bg-primary text-primary-foreground hover:bg-primary/90">
-              <Link href="#pricing">Secure a seat</Link>
+            <Button asChild size="lg" className="bg-[color:var(--bilby-primary)] text-white hover:brightness-95 font-semibold">
+              <Link href="/pricing">Secure a seat</Link>
             </Button>
-            <Button asChild variant="ghost" size="lg" className="text-secondary hover:bg-secondary/10">
+            <Button asChild variant="outline" size="lg" className="border-[color:var(--bilby-border)] text-[color:var(--bilby-text)] hover:bg-[color:var(--bilby-bg-muted)] font-semibold">
               <Link href="mailto:support@bilby.ai">Talk to us</Link>
             </Button>
           </div>
-          <div className="flex flex-wrap items-center justify-center gap-6 text-sm text-slate-500">
+          <div className="flex flex-wrap items-center justify-center gap-6 text-sm text-[color:var(--bilby-text)]/80">
             <span className="flex items-center gap-2">
-              <Users className="h-4 w-4" /> Multi-agent friendly
+              <Users className="h-4 w-4 text-[color:var(--bilby-primary)]" /> Multi-agent friendly
             </span>
             <span className="flex items-center gap-2">
-              <ShieldCheck className="h-4 w-4" /> APP aligned
+              <ShieldCheck className="h-4 w-4 text-[color:var(--bilby-primary)]" /> APP aligned
             </span>
             <span className="flex items-center gap-2">
-              <Globe2 className="h-4 w-4" /> AU edge + region
+              <Globe2 className="h-4 w-4 text-[color:var(--bilby-primary)]" /> AU edge + region
             </span>
           </div>
         </div>
       </section>
 
-      <footer className="border-t border-[#e0e0e0] bg-surface">
-        <div className="mx-auto flex max-w-6xl flex-col justify-between gap-4 px-6 py-6 text-sm text-slate-600 md:flex-row md:items-center">
-          <span>© {currentYear} BilbyAI. Built for Australian aged care.</span>
+      <footer className="bg-white border-t border-[color:var(--bilby-border)] py-12 relative z-10">
+        <div className="mx-auto flex max-w-6xl flex-col justify-between gap-4 px-6 text-sm text-[color:var(--bilby-text)]/80 md:flex-row md:items-center">
+          <div className="flex items-center gap-4">
+            <div className="p-2 rounded-xl bg-[color:var(--bilby-bg-muted)]">
+              <Phone className="h-4 w-4 text-[color:var(--bilby-primary)]" />
+            </div>
+            <span className="text-[color:var(--bilby-text)] font-semibold">© {currentYear} BilbyAI. Built for Australian aged care.</span>
+          </div>
           <div className="flex flex-wrap gap-4">
-            <Link href="/login" className="hover:text-primary">
+            <Link href="/login" className="hover:text-[color:var(--bilby-text)] transition-colors">
               Agent sign in
             </Link>
-            <Link href="mailto:support@bilby.ai" className="hover:text-primary">
+            <Link href="mailto:support@bilby.ai" className="hover:text-[color:var(--bilby-text)] transition-colors">
               Contact
             </Link>
             <Link
               href="https://www.oaic.gov.au/privacy/australian-privacy-principles"
               target="_blank"
-              className="hover:text-primary"
+              className="hover:text-[color:var(--bilby-text)] transition-colors"
             >
               APP guidelines
             </Link>
@@ -324,5 +241,6 @@ export default function LandingPage({ user }) {
         </div>
       </footer>
     </div>
+    </PageSurface>
   );
 }
